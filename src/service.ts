@@ -21,17 +21,17 @@ abstract class ServiceBase {
   private validations: { [key: string]: boolean };
 
   public abstract getValidationErrors(
-    locale,
     data,
     ruleLists,
     names,
+    messages,
   ): { [key: string]: string[] };
 
   public abstract filterPresentRelatedRule(rule: any): any;
 
   public abstract getDependencyKeysInRule(rule: any): string[];
 
-  public abstract getLocale(): string;
+  public abstract getValidationErrorTemplateMessages(): string[];
 
   public abstract getResponseBody(result: any, totalErrors): any;
 
@@ -915,7 +915,7 @@ abstract class ServiceBase {
         items,
         ruleLists,
       );
-      const locale = this.getLocale();
+      const messages = this.getValidationErrorTemplateMessages();
       const names = {};
 
       _.forEach(this.names, (v, k) => {
@@ -924,10 +924,10 @@ abstract class ServiceBase {
 
       _.forEach(ruleLists, (ruleList, ruleKey) => {
         const errorLists = this.getValidationErrors(
-          locale,
           items,
           { [ruleKey]: ruleList },
           names,
+          messages,
         );
 
         if (!_.isEmpty(errorLists)) {
