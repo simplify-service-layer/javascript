@@ -1,6 +1,6 @@
 {
-  "name": "@simplify-server-layer/javascript",
-  "description": "simplify server layer for javascript",
+  "name": "@simplify-service-layer/base",
+  "description": "simplify service layer for javascript",
   "version": "0.1.0",
   "scripts": {
     "lint": "eslint .",
