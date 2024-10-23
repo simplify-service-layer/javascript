@@ -1,3 +1,3 @@
 import Joi from "joi";
 
-export default Joi.extend();
+export default Joi;
