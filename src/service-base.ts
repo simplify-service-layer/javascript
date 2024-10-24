@@ -233,16 +233,7 @@ export default abstract class ServiceBase {
 
     _.forEach(self.getTraits(), (cls) => {
       let parent = cls;
-      let isServiceClass = false;
-
-      while (<Object>parent.prototype.__proto__.constructor !== Object) {
-        parent = parent.prototype.__proto__.constructor;
-        if (parent == ServiceBase) {
-          isServiceClass = true;
-        }
-      }
-
-      if (!isServiceClass) {
+      if (!self.isServiceClass(parent)) {
         throw new Error("trait class must extends Service");
       }
       arr = [...arr, ...cls.getAllTraits()];
@@ -300,9 +291,24 @@ export default abstract class ServiceBase {
     return (
       _.isArray(value) &&
       _.has(value, 0) &&
-      _.isObject(value[0]) &&
-      value[0] instanceof ServiceBase
+      ServiceBase.isServiceClass(value[0])
     );
+  }
+
+  public static isServiceClass(parent) {
+    let isServiceClass = false;
+
+    while (
+      parent.prototype &&
+      <Object>parent.prototype.__proto__.constructor !== Object
+    ) {
+      parent = parent.prototype.__proto__.constructor;
+      if (parent == ServiceBase) {
+        isServiceClass = true;
+      }
+    }
+
+    return isServiceClass;
   }
 
   public getChilds() {
