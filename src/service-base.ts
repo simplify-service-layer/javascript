@@ -479,7 +479,7 @@ export default abstract class ServiceBase {
           const k = segs.join(".");
 
           if (
-            !_.isArray(rKeyVal) ||
+            !_.isObject(rKeyVal) ||
             (!_.isEmpty(allSegs) && !_.has(rKeyVal, seg))
           ) {
             isSuccess = false;
@@ -522,14 +522,14 @@ export default abstract class ServiceBase {
           break;
         }
 
-        if (_.isArray(rKeyVal) && !_.has(rKeyVal, seg)) {
+        if (_.isObject(rKeyVal) && !_.has(rKeyVal, seg)) {
           ruleLists[k] = _.filter(ruleLists[k], (rule) => {
             return cls.filterPresentRelatedRule(rule);
           });
         }
 
         if (
-          !_.isArray(rKeyVal) ||
+          !_.isObject(rKeyVal) ||
           (!_.isEmpty(allSegs) && !_.has(rKeyVal, seg))
         ) {
           this.validations[key] = false;
