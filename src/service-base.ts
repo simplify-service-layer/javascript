@@ -471,7 +471,7 @@ export default abstract class ServiceBase {
         let allSegs = matches ? (matches[1] + ".*").split(".") : [];
         let segs: string[] = [];
         let rKeyVal = data;
-        let isSuccess = true;
+        let isLastKeyExists = true;
 
         while (!_.isEmpty(allSegs)) {
           const seg = <string>allSegs.shift();
@@ -482,7 +482,7 @@ export default abstract class ServiceBase {
             !_.isObject(rKeyVal) ||
             (!_.isEmpty(allSegs) && !_.has(rKeyVal, seg))
           ) {
-            isSuccess = false;
+            isLastKeyExists = false;
 
             break;
           }
@@ -492,7 +492,7 @@ export default abstract class ServiceBase {
           }
         }
 
-        if (isSuccess) {
+        if (isLastKeyExists) {
           _.forEach(rKeyVal, (v, k) => {
             const rNewKey = rKey.replace(
               "/^" + allSegs + ".*/",
@@ -503,9 +503,9 @@ export default abstract class ServiceBase {
               "{{" + rKey + "}}",
             ).replace(new RegExp("\\{\\{(\\s*)" + i + "(\\s*)\\}\\}"), k);
           });
-          delete ruleLists[rKey];
-          delete this.names[rKey];
         }
+        delete ruleLists[rKey];
+        _.has(this.names, rKey) ? delete this.names[rKey] : null;
       });
     }
 
@@ -532,7 +532,6 @@ export default abstract class ServiceBase {
           !_.isObject(rKeyVal) ||
           (!_.isEmpty(allSegs) && !_.has(rKeyVal, seg))
         ) {
-          this.validations[key] = false;
           const removeRuleLists = _.chain(ruleLists)
             .keys()
             .filter((v) => {
@@ -878,51 +877,30 @@ export default abstract class ServiceBase {
 
     _.forEach([...this.constructor.getAllTraits(), self.constructor], (cls) => {
       let ruleLists = this.getRelatedRuleLists(key, cls);
-      let allDepKeysInRule: string[] = [];
-      let notMustPresentDepKeysInRule: string[] = [];
-      let mustPresentDepKeysInRule: string[] = [];
-
-      _.forEach(ruleLists, (ruleList, k) => {
-        _.forEach(ruleList, (rule, i) => {
-          const presentRelatedRule = cls.filterPresentRelatedRule(rule);
-          if (presentRelatedRule) {
-            notMustPresentDepKeysInRule = [
-              ...notMustPresentDepKeysInRule,
-              ...cls.getDependencyKeysInRule(presentRelatedRule),
-            ];
-          }
-          allDepKeysInRule = [
-            ...allDepKeysInRule,
-            ...cls.getDependencyKeysInRule(rule),
-          ];
-        });
-      });
-      mustPresentDepKeysInRule = _.difference(
-        allDepKeysInRule,
-        notMustPresentDepKeysInRule,
+      ruleLists = this.filterAvailableExpandedRuleLists(
+        cls,
+        key,
+        items,
+        ruleLists,
       );
 
-      _.forEach(_.uniq(allDepKeysInRule), (k) => {
-        if (!!k.match(/\.\*/)) {
-          throw new Error(
-            "wildcard(*) key can't exists in rule dependency in " +
-              this.constructor.name,
-          );
-        }
-        if (!this.validate(k, depth)) {
-          this.validations[key] = false;
-        }
-      });
+      _.forEach(ruleLists, (ruleList, k) => {
+        _.forEach(ruleList, (rule, j) => {
+          const depKeysInRule = cls.getDependencyKeysInRule(rule);
+          _.forEach(depKeysInRule, (depKey) => {
+            if (!!depKey.match(/\.\*/)) {
+              throw new Error(
+                "wildcard(*) key can't exists in rule dependency in " +
+                  cls.name,
+              );
+            }
 
-      _.forEach(_.uniq(mustPresentDepKeysInRule), (k) => {
-        if (!_.has(this.data, k)) {
-          throw new Error(
-            '"' +
-              k +
-              '" key required rule not exists in ' +
-              this.constructor.name,
-          );
-        }
+            if (!this.validate(depKey, depth)) {
+              this.validations[key] = false;
+              delete ruleLists[k][j];
+            }
+          });
+        });
       });
 
       _.forEach(ruleLists, (ruleList, k) => {
@@ -931,12 +909,6 @@ export default abstract class ServiceBase {
         });
       });
 
-      ruleLists = this.filterAvailableExpandedRuleLists(
-        cls,
-        key,
-        items,
-        ruleLists,
-      );
       const messages = cls.getValidationErrorTemplateMessages();
       const names = {};
 
