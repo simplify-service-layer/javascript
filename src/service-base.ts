@@ -683,13 +683,22 @@ export default abstract class ServiceBase {
     const ruleLists = this.constructor.getAllRuleLists().has(cls)
       ? this.constructor.getAllRuleLists().get(cls)
       : {};
-
-    return _.pickBy(ruleLists, function (ruleList, k) {
+    const filterLists = _.pickBy(ruleLists, function (ruleList, k) {
       return !!(
         k.match(new RegExp("^" + key + "$")) ||
         k.match(new RegExp("^" + key + "\\."))
       );
     });
+    const keySegs = key.split(".");
+
+    _.forEach(_.range(keySegs.length - 1), (i) => {
+      const parentKey = keySegs.slice(0, i + 1).join(".");
+      if (_.has(ruleLists, parentKey)) {
+        filterLists[parentKey] = ruleLists[parentKey];
+      }
+    });
+
+    return filterLists;
   }
 
   protected getShouldOrderedCallbackKeys(keys): string[] {
