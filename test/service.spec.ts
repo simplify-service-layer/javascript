@@ -171,9 +171,7 @@ describe("service", () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
-          result: "result name",
-          "result.a": "result.a name",
-          "result.b": "result.b name",
+          result: "result[...] name",
         };
       }
 
