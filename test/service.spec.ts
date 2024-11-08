@@ -167,7 +167,7 @@ describe("service", () => {
     expect(service2.getErrors()).not.toEqual({});
   });
 
-  test("loadDataKeyParentInvaildAndChildValid", () => {
+  test("loadDataKeyInvaildBecauseOfChildrenRule", () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -204,6 +204,49 @@ describe("service", () => {
     expect(service.getValidations()["result"]).toBe(false);
     expect(service.getValidations()["result.a"]).toBe(false);
     expect(service.getValidations()["result.b"]).toBe(true);
+  });
+
+  test("loadDataKeyInvaildBecauseOfParentRule", () => {
+    const service = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "result[...] name",
+        };
+      }
+
+      public static getLoaders() {
+        return {
+          result: () => {
+            return {
+              a: {
+                c: "ccc",
+              },
+              b: {
+                c: "ccc",
+              },
+            };
+          },
+        };
+      }
+
+      public static getRuleLists() {
+        return {
+          result: [Joi.object({})],
+          "result.a": [Joi.object(), Joi.valid({ a: "something" })],
+          "result.a.c": [Joi.string()],
+          "result.b": [Joi.object()],
+          "result.b.c": [Joi.string()],
+        };
+      }
+    })({}, {});
+
+    service.run();
+
+    expect(service.getValidations()["result"]).toBe(false);
+    expect(service.getValidations()["result.a"]).toBe(false);
+    expect(service.getValidations()["result.a.c"]).toBe(false);
+    expect(service.getValidations()["result.b"]).toBe(true);
+    expect(service.getValidations()["result.b.c"]).toBe(true);
   });
 
   test("loadName", () => {
