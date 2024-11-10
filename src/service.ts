@@ -179,10 +179,6 @@ export default class Service extends ServiceBase {
     return hasArrayObject;
   }
 
-  public static removeDependencyKeySymbolInRule(rule) {
-    return rule;
-  }
-
   public getResponseBody(
     result: { [key: string]: string },
     totalErrors: { [key: string]: string[] },

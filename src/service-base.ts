@@ -13,7 +13,6 @@ type Constructor = typeof ServiceBase & {
   getDependencyKeysInRule(rule: any): string[];
   getValidationErrorTemplateMessages(): { [key: string]: string };
   hasArrayObjectRuleInRuleList(ruleList: any[]): boolean;
-  removeDependencyKeySymbolInRule(rule: any): any;
 };
 export default interface ServiceBase {
   constructor: Constructor;
@@ -60,7 +59,6 @@ export default abstract class ServiceBase {
         "getDependencyKeysInRule",
         "getValidationErrorTemplateMessages",
         "hasArrayObjectRuleInRuleList",
-        "removeDependencyKeySymbolInRule",
       ],
       (method) => {
         if (!this.constructor[method]) {
@@ -943,9 +941,6 @@ export default abstract class ServiceBase {
       });
 
       _.forEach(ruleLists, (ruleList, k) => {
-        _.forEach(ruleList, (rule, j) => {
-          ruleLists[k][j] = cls.removeDependencyKeySymbolInRule(rule);
-        });
         names[k] = this.resolveBindName("{{" + k + "}}");
       });
 
