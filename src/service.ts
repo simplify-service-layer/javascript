@@ -112,56 +112,53 @@ export default class Service extends ServiceBase {
   }
 
   public static getValidationErrors(data, ruleLists, names, messages) {
-    const rootSchema = Joi.object({});
+    const errors = {};
 
     _.forEach(ruleLists, (ruleList, key) => {
-      const segs: string[] = key.split(".");
-      let parentSchema = rootSchema;
+      _.forEach(ruleList, (rule) => {
+        const segs: string[] = key.split(".");
+        const rootSchema = Joi.object({});
+        let parentSchema = rootSchema;
+        while (!_.isEmpty(segs)) {
+          const seg = <string>segs.shift();
+          if (
+            !_.has(parentSchema, "_ids") ||
+            !_.has(parentSchema["_ids"], "_byKey") ||
+            !(<Map<string, any>>parentSchema["_ids"]["_byKey"]).has(seg)
+          ) {
+            let node;
+            if (!_.isEmpty(segs)) {
+              node = Joi.object({});
+            } else {
+              node = rule.label(names[key]);
+            }
 
-      while (!_.isEmpty(segs)) {
-        const seg = <string>segs.shift();
-        if (
-          !_.has(parentSchema, "_ids") ||
-          !_.has(parentSchema["_ids"], "_byKey") ||
-          !(<Map<string, any>>parentSchema["_ids"]["_byKey"]).has(seg)
-        ) {
-          let node;
-          if (!_.isEmpty(segs)) {
-            node = Joi.object({});
-          } else {
-            node = Joi.any().label(names[key]);
-            _.forEach(ruleList, (rule) => {
-              node = node.concat(rule);
+            const schema = parentSchema.concat(Joi.object({ [seg]: node }));
+            Object.keys(schema).forEach((k) => {
+              parentSchema[k] = schema[k];
             });
           }
+          parentSchema = (<Map<string, any>>parentSchema["_ids"]["_byKey"]).get(
+            seg,
+          ).schema;
+        }
+        const result = rootSchema.validate(data, {
+          abortEarly: false,
+          allowUnknown: true,
+          messages,
+        });
 
-          const schema = parentSchema.concat(Joi.object({ [seg]: node }));
-          Object.keys(schema).forEach((k) => {
-            parentSchema[k] = schema[k];
+        if (result.error) {
+          _.forEach(result.error.details, (detail) => {
+            const errorKey = detail.path.join(".");
+            if (!_.has(errors, errorKey)) {
+              errors[errorKey] = [];
+            }
+            errors[errorKey].push(detail.message);
           });
         }
-        parentSchema = (<Map<string, any>>parentSchema["_ids"]["_byKey"]).get(
-          seg,
-        ).schema;
-      }
-    });
-
-    const errors = {};
-    const result = rootSchema.validate(data, {
-      abortEarly: false,
-      allowUnknown: true,
-      messages,
-    });
-
-    if (result.error) {
-      _.forEach(result.error.details, (detail) => {
-        const errorKey = detail.path.join(".");
-        if (!_.has(errors, errorKey)) {
-          errors[errorKey] = [];
-        }
-        errors[errorKey].push(detail.message);
       });
-    }
+    });
 
     return errors;
   }
