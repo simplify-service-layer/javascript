@@ -783,8 +783,6 @@ export default abstract class ServiceBase {
       if (keySegs.length > 1) {
         const replace = "[" + _.slice(keySegs, 1).join("][") + "]";
         name = name.replace("[...]", replace);
-      } else if (1 == keySegs.length) {
-        name = name.replace("[...]", "");
       }
     }
 
