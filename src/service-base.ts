@@ -928,6 +928,23 @@ export default abstract class ServiceBase {
               );
             }
 
+            const depKeySegs = depKey.split(".");
+            let depVal = items;
+            let hasDepVal = true;
+            while (!_.isEmpty(depKeySegs)) {
+              const seg = <string>depKeySegs.shift();
+              if (!_.has(depVal, seg)) {
+                hasDepVal = false;
+
+                break;
+              }
+              depVal = depVal[seg];
+            }
+
+            if (!hasDepVal) {
+              delete ruleLists[k][j];
+            }
+
             if (!this.validate(depKey, depth)) {
               this.validations[key] = false;
               delete ruleLists[k][j];
