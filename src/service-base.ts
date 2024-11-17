@@ -12,7 +12,7 @@ type Constructor = typeof ServiceBase & {
   ): { [key: string]: string[] };
   getDependencyKeysInRule(rule: any): string[];
   getValidationErrorTemplateMessages(): { [key: string]: string };
-  hasArrayObjectRuleInRuleList(ruleList: any[]): boolean;
+  hasArrayObjectRuleInRuleList(ruleList: any[], key?: string): boolean;
 };
 export default interface ServiceBase {
   constructor: Constructor;
@@ -434,7 +434,7 @@ export default abstract class ServiceBase {
       const ruleLists = this.constructor.getAllRuleLists().get(cl);
       const ruleList = _.has(ruleLists, key) ? ruleLists[key] : [];
 
-      if (cl.hasArrayObjectRuleInRuleList(ruleList)) {
+      if (cl.hasArrayObjectRuleInRuleList(ruleList, key)) {
         hasArrayObjectRule = true;
       }
     });
@@ -451,9 +451,9 @@ export default abstract class ServiceBase {
     _.chain(ruleLists)
       .keys()
       .forEach((k) => {
-        const segs = k.split(".");
-        for (let i = 0; i < segs.length - 1; ++i) {
-          const parentKey = segs.slice(0, i + 1).join(".");
+        const keySegs = k.split(".");
+        for (let i = 0; i < keySegs.length - 1; ++i) {
+          const parentKey = keySegs.slice(0, i + 1).join(".");
           const hasArrayObjectRule =
             this.hasArrayObjectRuleInRuleLists(parentKey);
 
@@ -703,8 +703,8 @@ export default abstract class ServiceBase {
     _.forEach(keys, (key) => {
       const promiseLists = this.constructor.getAllPromiseLists();
       const deps = _.has(promiseLists, key) ? promiseLists[key] : [];
-      let list = this.getShouldOrderedCallbackKeys(deps);
-      arr = [...list, key, ...arr];
+      const orderedKeys = this.getShouldOrderedCallbackKeys(deps);
+      arr = [...orderedKeys, key, ...arr];
     });
 
     return _.uniq(_.values(arr));
@@ -973,10 +973,11 @@ export default abstract class ServiceBase {
           if (!_.has(this.errors, ruleKey)) {
             this.errors[ruleKey] = [];
           }
-          this.errors[ruleKey] = [
-            ...this.errors[ruleKey],
-            ...errorLists[ruleKey],
-          ];
+          errorLists[ruleKey].forEach((error) => {
+            if (!this.errors[ruleKey].includes(error)) {
+              this.errors[ruleKey].push(error);
+            }
+          });
           this.validations[key] = false;
           return false;
         }
