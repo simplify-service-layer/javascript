@@ -277,7 +277,7 @@ describe("service", () => {
     expect(service.getErrors()["result"][0]).toContain("result name");
   });
 
-  test("loadNamebound", () => {
+  test("loadNameBound", () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -302,7 +302,7 @@ describe("service", () => {
     expect(service.getErrors()["result"][0]).toContain("result name");
   });
 
-  test("loadNameNested", () => {
+  test("loadNameBoundNested", () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {};
@@ -330,5 +330,71 @@ describe("service", () => {
 
     expect(service.getErrors()).not.toEqual({});
     expect(service.getErrors()["result"][0]).toContain("aaaa bbb ccc ddd");
+  });
+
+  test("loadNameBoundNested", () => {
+    const service = new (class extends Service {
+      public static getBindNames() {
+        return {};
+      }
+
+      public static getLoaders() {
+        return {};
+      }
+
+      static getRuleLists() {
+        return {
+          result: [Joi.required()],
+        };
+      }
+    })(
+      {},
+      {
+        result: "{{abcd}}",
+        aaa: "aaaa",
+        abcd: "{{aaa}} bbb ccc ddd",
+      },
+    );
+
+    service.run();
+
+    expect(service.getErrors()).not.toEqual({});
+    expect(service.getErrors()["result"][0]).toContain("aaaa bbb ccc ddd");
+  });
+
+  test("loadNameMultidimension", () => {
+    const service = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "result[...] name",
+        };
+      }
+
+      public static getLoaders() {
+        return {};
+      }
+
+      static getRuleLists() {
+        return {
+          result: [Joi.object(), Joi.required()],
+          "result.a": [Joi.object(), Joi.required()],
+          "result.a.b": [Joi.required()],
+        };
+      }
+    })(
+      {
+        result: {
+          a: {},
+        },
+      },
+      {},
+    );
+
+    service.run();
+
+    expect(service.getErrors()).not.toEqual({});
+    expect(Object.keys(service.getErrors()).includes("result.a.b")).toBe(true);
+    expect(service.getErrors()["result.a.b"].length).toBe(1);
+    expect(service.getErrors()["result.a.b"][0]).toContain("result[a][b] name");
   });
 });
