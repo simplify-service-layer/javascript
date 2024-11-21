@@ -167,6 +167,38 @@ describe("service", () => {
     expect(service2.getErrors()).not.toEqual({});
   });
 
+  test("loadDataFromLoaderWithDependency", () => {
+    const service1 = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getLoaders() {
+        return {
+          aaa: () => {
+            return "aaaaaa";
+          },
+          result: (aaa) => {
+            return aaa + " value";
+          },
+        };
+      }
+
+      public static getRuleLists() {
+        return {
+          result: [Joi.required(), Joi.string()],
+        };
+      }
+    })({}, {});
+
+    service1.run();
+
+    expect(service1.getErrors()).toEqual({});
+    expect(service1.getData()["result"]).toEqual("aaaaaa value");
+  });
+
   test("loadDataKeyInvaildBecauseOfChildrenRule", () => {
     const service = new (class extends Service {
       public static getBindNames() {
