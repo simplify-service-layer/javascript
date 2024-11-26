@@ -155,6 +155,8 @@ export default abstract class ServiceBase {
       });
     });
 
+    arr = Object.assign(arr, self.getCallbacks());
+
     return arr;
   }
 
