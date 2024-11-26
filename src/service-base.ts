@@ -815,6 +815,10 @@ export default abstract class ServiceBase {
     const depths = depth.split("|");
     const mainKey = key.split(".")[0];
 
+    if (_.has(this.validations, key)) {
+      return this.validations[key];
+    }
+
     if (
       _.filter(depths, (seg) => {
         return seg == key;
@@ -826,10 +830,6 @@ export default abstract class ServiceBase {
           "] occurred in " +
           this.constructor.name,
       );
-    }
-
-    if (_.has(this.validations, key)) {
-      return this.validations[key];
     }
 
     const keySegs: string[] = key.split(".");
