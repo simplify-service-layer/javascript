@@ -132,7 +132,7 @@ export default abstract class ServiceBase {
     _.chain(self.getCallbacks())
       .keys()
       .forEach((key) => {
-        if (!new RegExp("^[a-zA-Z][\\w-]{0,}#[\\w-]{1,}(|@defer)").test(key)) {
+        if (!new RegExp("^[a-zA-Z][\\w-]{0,}__[\\w-]{1,}(|@defer)").test(key)) {
           throw new Error(
             key +
               " callback key is not support pattern in " +
@@ -660,13 +660,13 @@ export default abstract class ServiceBase {
     const promiseKeys = _.filter(
       _.keys(this.constructor.getAllPromiseLists()),
       (value) => {
-        return !!value.match(new RegExp("^" + key + "#"));
+        return !!value.match(new RegExp("^" + key + "__"));
       },
     );
     const allKeys = _.filter(
       _.keys(this.constructor.getAllCallbacks()),
       (value) => {
-        return !!value.match(new RegExp("^" + key + "#"));
+        return !!value.match(new RegExp("^" + key + "__"));
       },
     );
     const orderedKeys = this.getShouldOrderedCallbackKeys(promiseKeys);
