@@ -2,6 +2,45 @@ import Service from "../src/service";
 import Joi from "../src/validation/validator";
 
 describe("service", () => {
+  test("callback", () => {
+    const service = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getCallbacks() {
+        return {
+          result__cb1: (result) => {
+            result.abcd = "aaaa";
+          },
+        };
+      }
+
+      static getRuleLists() {
+        return {
+          result: [Joi.required()],
+        };
+      }
+    })(
+      {
+        result: {
+          aaaa: "aaaa",
+        },
+      },
+      {},
+    );
+
+    service.run();
+
+    expect(service.getErrors()).toEqual({});
+    expect(service.getData()["result"]).toEqual({
+      aaaa: "aaaa",
+      abcd: "aaaa",
+    });
+  });
+
   test("loadDataFromInput", () => {
     const service = new (class extends Service {
       public static getBindNames() {
