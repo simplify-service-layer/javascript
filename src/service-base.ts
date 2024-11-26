@@ -581,8 +581,7 @@ export default abstract class ServiceBase {
 
     _.forEach(params, (param: any) => {
       const dep: string = param.left ? param.left.name : param.name;
-
-      deps.push(_.snakeCase(dep));
+      deps.push(dep);
     });
 
     return deps;
