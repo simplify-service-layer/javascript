@@ -877,6 +877,7 @@ export default abstract class ServiceBase {
     }
 
     const orderedCallbackKeys: string[] = this.getOrderedCallbackKeys(key);
+    const callbacks = this.constructor.getAllCallbacks();
 
     _.forEach(orderedCallbackKeys, (callbackKey: string) => {
       const callback = this.constructor.getAllCallbacks()[callbackKey];
@@ -887,11 +888,16 @@ export default abstract class ServiceBase {
           this.validations[key] = false;
         }
       });
-
-      if (!callbackKey.match(/@defer$/)) {
-        this.resolve(callback);
-      }
     });
+
+    if (true === this.validations[key]) {
+      _.forEach(orderedCallbackKeys, (callbackKey: string) => {
+        if (!callbackKey.match(/@defer$/)) {
+          const callback = callbacks[callbackKey];
+          this.resolve(callback);
+        }
+      });
+    }
 
     if (false === this.validations[key]) {
       return false;
