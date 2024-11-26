@@ -41,6 +41,112 @@ describe("service", () => {
     });
   });
 
+  test("callbackWithDependency", () => {
+    const service1 = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getCallbacks() {
+        return {
+          result__cb1: (result, test1) => {
+            result.abcd = test1;
+          },
+          result__cb2: (result, test2) => {
+            result.bcde = test2;
+          },
+        };
+      }
+
+      public static getLoaders() {
+        return {
+          test1: () => {
+            return "test1 val";
+          },
+        };
+      }
+      static getRuleLists() {
+        return {
+          result: [Joi.required()],
+        };
+      }
+    })(
+      {
+        result: {
+          aaaa: "aaaa",
+        },
+      },
+      {},
+    );
+
+    service1.run();
+
+    expect(service1.getErrors()).toEqual({});
+    expect(service1.getValidations()).toEqual({
+      result: true,
+      test1: true,
+      test2: true,
+    });
+    expect(service1.getData()["result"]).toEqual({
+      aaaa: "aaaa",
+      abcd: "test1 val",
+    });
+
+    const service2 = new (class extends Service {
+      public static getBindNames() {
+        return {
+          result: "name for result",
+          test2: "name for test2",
+        };
+      }
+
+      public static getCallbacks() {
+        return {
+          result__cb1: (result, test1) => {
+            result.abcd = test1;
+          },
+          result__cb2: (result, test2) => {
+            result.bcde = test2;
+          },
+        };
+      }
+
+      public static getLoaders() {
+        return {
+          test1: () => {
+            return "test1 val";
+          },
+        };
+      }
+      static getRuleLists() {
+        return {
+          result: [Joi.required()],
+          test2: [Joi.required()],
+        };
+      }
+    })(
+      {
+        result: {
+          aaaa: "aaaa",
+        },
+      },
+      {},
+    );
+
+    service2.run();
+    expect(service2.getErrors()).not.toEqual({});
+    expect(service2.getValidations()).toEqual({
+      result: false,
+      test1: true,
+      test2: false,
+    });
+    expect(service2.getData()["result"]).toEqual({
+      aaaa: "aaaa",
+    });
+  });
+
   test("loadDataFromInput", () => {
     const service = new (class extends Service {
       public static getBindNames() {
