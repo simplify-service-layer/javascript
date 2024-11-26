@@ -6,7 +6,7 @@ describe("service", () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
-          result: "name for key1",
+          result: "name for result",
         };
       }
 
