@@ -23,7 +23,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: {
           aaaa: "aaaa",
@@ -72,7 +72,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: {
           aaaa: "aaaa",
@@ -126,7 +126,7 @@ describe("service", () => {
           test2: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: {
           aaaa: "aaaa",
@@ -164,7 +164,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: "result value",
       },
@@ -203,7 +203,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: [[childService], [childService]],
       },
@@ -245,7 +245,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: [childService],
       },
@@ -279,7 +279,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })({}, {});
+    })().init({}, {});
 
     service1.run();
 
@@ -305,7 +305,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })({}, {});
+    })().init({}, {});
 
     service2.run();
 
@@ -336,7 +336,88 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })({}, {});
+    })().init({}, {});
+
+    service1.run();
+
+    expect(service1.getErrors()).toEqual({});
+    expect(service1.getData()["result"]).toEqual("aaaaaa value");
+  });
+
+  test("loadDataFromProperty", () => {
+    const service1 = new (class extends Service {
+      result: string = "aaaa";
+
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getLoaders() {
+        return {};
+      }
+
+      public static getRuleLists() {
+        return {
+          result: [Joi.required(), Joi.string()],
+        };
+      }
+    })().init({}, {});
+
+    service1.run();
+
+    expect(service1.getErrors()).toEqual({});
+
+    const service2 = new (class extends Service {
+      result: string[] = ["aaa", "bbb", "ccc"];
+
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getLoaders() {
+        return {};
+      }
+
+      public static getRuleLists() {
+        return {
+          result: [Joi.required(), Joi.string()],
+        };
+      }
+    })().init({}, {});
+
+    service2.run();
+
+    expect(service2.getErrors()).not.toEqual({});
+  });
+
+  test("loadDataFromPropertyInDependency", () => {
+    const service1 = new (class extends Service {
+      aaa: string = "aaaaaa";
+
+      public static getBindNames() {
+        return {
+          result: "name for result",
+        };
+      }
+
+      public static getLoaders() {
+        return {
+          result: (aaa) => {
+            return aaa + " value";
+          },
+        };
+      }
+
+      public static getRuleLists() {
+        return {
+          result: [Joi.required(), Joi.string()],
+        };
+      }
+    })().init({}, {});
 
     service1.run();
 
@@ -374,7 +455,7 @@ describe("service", () => {
           "result.b": [Joi.object({})],
         };
       }
-    })({}, {});
+    })().init({}, {});
 
     service.run();
 
@@ -415,7 +496,7 @@ describe("service", () => {
           "result.b.c": [Joi.string()],
         };
       }
-    })({}, {});
+    })().init({}, {});
 
     service.run();
 
@@ -441,7 +522,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {},
       {
         result: "result name",
@@ -471,7 +552,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })({}, {});
+    })().init({}, {});
 
     service.run();
 
@@ -494,7 +575,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {},
       {
         result: "{{abcd}}",
@@ -524,7 +605,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })(
+    })().init(
       {},
       {
         result: "{{abcd}}",
@@ -558,7 +639,7 @@ describe("service", () => {
           "result.a.b": [Joi.required()],
         };
       }
-    })(
+    })().init(
       {
         result: {
           a: {},

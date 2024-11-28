@@ -24,72 +24,19 @@ export default abstract class ServiceBase {
   private static onStartCallbacks: (() => void)[] = [];
   private static onFailCallbacks: (() => void)[] = [];
   private static onSuccessCallbacks: (() => void)[] = [];
-  private childs: { [key: string]: ServiceBase };
-  private data: { [key: string]: any };
-  private errors: { [key: string]: string[] };
-  private inputs: { [key: string]: any };
-  private isRun: boolean;
-  private names: { [key: string]: string };
-  private parent: null | ServiceBase;
-  private validations: { [key: string]: boolean };
+  private childs: { [key: string]: ServiceBase } = {};
+  private data: { [key: string]: any } = {};
+  private errors: { [key: string]: string[] } = {};
+  private inputs: { [key: string]: any } = {};
+  private isRun: boolean = false;
+  private names: { [key: string]: string } = {};
+  private parent: null | ServiceBase = null;
+  private validations: { [key: string]: boolean } = {};
 
   public abstract getResponseBody(
     result: { [key: string]: string },
     totalErrors: { [key: string]: string[] },
   ): Response;
-
-  public constructor(
-    inputs: { [key: string]: any } = {},
-    names: { [key: string]: string } = {},
-    parent: null | ServiceBase = null,
-  ) {
-    this.childs = {};
-    this.data = {};
-    this.errors = {};
-    this.inputs = inputs;
-    this.names = names;
-    this.validations = {};
-    this.isRun = false;
-    this.parent = parent;
-
-    _.forEach(
-      [
-        "filterPresentRelatedRule",
-        "getValidationErrors",
-        "getDependencyKeysInRule",
-        "getValidationErrorTemplateMessages",
-        "hasArrayObjectRuleInRuleList",
-      ],
-      (method) => {
-        if (!this.constructor[method]) {
-          throw new Error("should be implement method[" + method + "]");
-        }
-      },
-    );
-
-    _.chain(this.inputs)
-      .keys()
-      .forEach((key) => {
-        if (!new RegExp("^[a-zA-Z][w-]{0,}").test(key)) {
-          throw new Error(
-            key +
-              " loader key is not support pattern in " +
-              this.constructor.name,
-          );
-        }
-      })
-      .value();
-
-    _.chain(this.inputs)
-      .keys()
-      .forEach((key) => {
-        this.validate(key);
-      })
-      .value();
-
-    ServiceBase.getAllCallbacks();
-    ServiceBase.getAllLoaders();
-  }
 
   public static addOnFailCallback(callback) {
     ServiceBase.onFailCallbacks.push(callback);
@@ -281,12 +228,10 @@ export default abstract class ServiceBase {
   public static initService(value: any[]) {
     _.has(value, 1) ? null : (value[1] = {});
     _.has(value, 2) ? null : (value[2] = {});
-    _.has(value, 3) ? null : (value[3] = null);
 
     const cls = value[0];
     const data = value[1];
     const names = value[2];
-    const parent = value[3];
 
     _.forEach(data, (value, key) => {
       if ("" === value) {
@@ -294,7 +239,7 @@ export default abstract class ServiceBase {
       }
     });
 
-    return new cls(data, names, parent);
+    return new cls().init(data, names);
   }
 
   public static isInitable(value) {
@@ -333,6 +278,22 @@ export default abstract class ServiceBase {
     return _.cloneDeep(this.errors);
   }
 
+  public getInjectedPropNames() {
+    return _.difference(
+      Object.getOwnPropertyNames(this),
+      Object.getOwnPropertyNames(
+        new (class extends ServiceBase {
+          public getResponseBody(
+            result: { [key: string]: string },
+            totalErrors: { [key: string]: string[] },
+          ): Response {
+            return {};
+          }
+        })(),
+      ),
+    );
+  }
+
   public getInputs() {
     return _.cloneDeep(this.inputs);
   }
@@ -356,6 +317,65 @@ export default abstract class ServiceBase {
 
   public getValidations() {
     return _.cloneDeep(this.validations);
+  }
+
+  public init(
+    inputs: { [key: string]: any } = {},
+    names: { [key: string]: string } = {},
+  ) {
+    _.forEach(
+      [
+        "filterPresentRelatedRule",
+        "getValidationErrors",
+        "getDependencyKeysInRule",
+        "getValidationErrorTemplateMessages",
+        "hasArrayObjectRuleInRuleList",
+      ],
+      (method) => {
+        if (!this.constructor[method]) {
+          throw new Error("should be implement method[" + method + "]");
+        }
+      },
+    );
+
+    if (this.isRun) {
+      throw new Error("already run service [" + this.constructor.name + "]");
+    }
+
+    const injectedPropNames = this.getInjectedPropNames();
+
+    _.chain(inputs)
+      .keys()
+      .forEach((key) => {
+        if (_.includes(injectedPropNames, key)) {
+          throw new Error(
+            key +
+              " input key is duplicated with property in " +
+              this.constructor.name,
+          );
+        }
+        if (!new RegExp("^[a-zA-Z][w-]{0,}").test(key)) {
+          throw new Error(
+            key +
+              " input key is not support pattern in " +
+              this.constructor.name,
+          );
+        }
+      })
+      .value();
+
+    this.childs = {};
+    this.data = {};
+    this.errors = {};
+    this.inputs = inputs;
+    this.names = names;
+    this.validations = {};
+    this.isRun = false;
+
+    ServiceBase.getAllCallbacks();
+    ServiceBase.getAllLoaders();
+
+    return this.clone();
   }
 
   public run() {
@@ -428,6 +448,14 @@ export default abstract class ServiceBase {
       : null;
 
     return this.getResponseBody(result, totalErrors);
+  }
+
+  public setParent(parent) {
+    this.parent = parent;
+  }
+
+  protected clone(): ServiceBase {
+    return this;
   }
 
   protected hasArrayObjectRuleInRuleLists(key) {
@@ -599,6 +627,8 @@ export default abstract class ServiceBase {
 
     if (_.has(this.getInputs(), key)) {
       value = this.getInputs()[key];
+    } else if (this.getInjectedPropNames().includes(key)) {
+      value = this[key];
     } else {
       if (_.isNull(loader)) {
         return data;
@@ -630,11 +660,12 @@ export default abstract class ServiceBase {
         _.forEach(v[2], (name, k) => {
           v[2][k] = this.resolveBindName(name);
         });
-        v[3] = this;
         service = this.constructor.initService(v);
+        service.setParent(this);
         resolved = service.run();
       } else if (v instanceof ServiceBase) {
         service = v;
+        service.setParent(this);
         resolved = service.run();
       }
 
