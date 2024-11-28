@@ -446,7 +446,6 @@ export default abstract class ServiceBase {
 
   protected filterAvailableExpandedRuleLists(
     cls: Constructor,
-    key,
     data,
     ruleLists,
   ) {
@@ -913,12 +912,7 @@ export default abstract class ServiceBase {
     _.forEach([...this.constructor.getAllTraits(), self.constructor], (cls) => {
       const names = {};
       let ruleLists = this.getRelatedRuleLists(key, cls);
-      ruleLists = this.filterAvailableExpandedRuleLists(
-        cls,
-        key,
-        items,
-        ruleLists,
-      );
+      ruleLists = this.filterAvailableExpandedRuleLists(cls, items, ruleLists);
 
       if (!_.isEmpty(ruleLists)) {
         names[mainKey] = this.resolveBindName("{{" + mainKey + "}}");
