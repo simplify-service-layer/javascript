@@ -2,7 +2,7 @@ import * as acorn from "acorn";
 import _ from "lodash";
 
 export type Response = { [key: string]: string | string[] | Response };
-type Constructor = typeof ServiceBase & {
+export type ServiceBaseClass = typeof ServiceBase & {
   filterPresentRelatedRule(rule: any): any;
   getValidationErrors(
     data: { [key: string]: any[] },
@@ -15,7 +15,7 @@ type Constructor = typeof ServiceBase & {
   hasArrayObjectRuleInRuleList(ruleList: any[], key?: string): boolean;
 };
 export default interface ServiceBase {
-  constructor: Constructor;
+  constructor: ServiceBaseClass;
   __proto__: ServiceBase;
 }
 
@@ -162,9 +162,12 @@ export default abstract class ServiceBase {
     return arr;
   }
 
-  public static getAllRuleLists(): Map<Constructor, { [key: string]: any[] }> {
-    const self = <Constructor>this;
-    let map: Map<Constructor, { [key: string]: any[] }> = new Map();
+  public static getAllRuleLists(): Map<
+    ServiceBaseClass,
+    { [key: string]: any[] }
+  > {
+    const self = <ServiceBaseClass>this;
+    let map: Map<ServiceBaseClass, { [key: string]: any[] }> = new Map();
     _.forEach([...ServiceBase.getAllTraits(), self], (cls) => {
       map.set(cls, {});
       const ruleLists = <{ [key: string]: any[] }>map.get(cls);
@@ -184,9 +187,9 @@ export default abstract class ServiceBase {
     return map;
   }
 
-  public static getAllTraits(): Constructor[] {
+  public static getAllTraits(): ServiceBaseClass[] {
     const self = this;
-    let arr: Constructor[] = [];
+    let arr: ServiceBaseClass[] = [];
 
     _.forEach(self.getTraits(), (cls) => {
       let parent = cls;
@@ -221,7 +224,7 @@ export default abstract class ServiceBase {
     return {};
   }
 
-  public static getTraits(): Constructor[] {
+  public static getTraits(): ServiceBaseClass[] {
     return [];
   }
 
@@ -460,11 +463,11 @@ export default abstract class ServiceBase {
 
   protected hasArrayObjectRuleInRuleLists(key) {
     let hasArrayObjectRule = false;
-    [...this.constructor.getAllRuleLists().keys()].forEach((cl) => {
-      const ruleLists = this.constructor.getAllRuleLists().get(cl);
+    [...this.constructor.getAllRuleLists().keys()].forEach((cls) => {
+      const ruleLists = this.constructor.getAllRuleLists().get(cls);
       const ruleList = _.has(ruleLists, key) ? ruleLists[key] : [];
 
-      if (cl.hasArrayObjectRuleInRuleList(ruleList, key)) {
+      if (cls.hasArrayObjectRuleInRuleList(ruleList, key)) {
         hasArrayObjectRule = true;
       }
     });
@@ -473,7 +476,7 @@ export default abstract class ServiceBase {
   }
 
   protected filterAvailableExpandedRuleLists(
-    cls: Constructor,
+    cls: ServiceBaseClass,
     data,
     ruleLists,
   ) {
