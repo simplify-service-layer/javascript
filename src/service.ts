@@ -1,10 +1,11 @@
 import { Schema } from "joi";
 import _ from "lodash";
 import ServiceBase, { Response } from "./service-base";
+import ErrorTemplateMessages from "./validation/lang/en.json";
 import Joi from "./validation/validator";
 
 export default class Service extends ServiceBase {
-  public filterPresentRelatedRule(rule: Schema) {
+  public static filterPresentRelatedRule(rule: Schema) {
     const setOnlyPresence = (schema: any) => {
       schema.type = "any";
       schema["_refs"] = { refs: [] };
@@ -25,37 +26,42 @@ export default class Service extends ServiceBase {
 
     let copyRule = _.cloneDeep(rule);
     setOnlyPresence(copyRule);
-    copyRule.$_terms["whens"] = copyRule.$_terms["whens"].reduce(
-      (acc, when) => {
-        let hasPresenceRule = false;
-        ["then", "otherwise"].forEach((after) => {
-          const data = when[after];
-          if (!!data) {
-            setOnlyPresence(data);
-          } else {
-            when[after] = null;
+    if (copyRule.$_terms && copyRule.$_terms["whens"]) {
+      copyRule.$_terms["whens"] = copyRule.$_terms["whens"].reduce(
+        (acc, when) => {
+          let hasPresenceRule = false;
+          ["then", "otherwise"].forEach((after) => {
+            const data = when[after];
+            if (!!data) {
+              setOnlyPresence(data);
+            } else {
+              when[after] = null;
+            }
+          });
+          if (hasPresenceRule) {
+            acc.push(when);
           }
-        });
-        if (hasPresenceRule) {
-          acc.push(when);
-        }
-        return acc;
-      },
-      [],
-    );
+          return acc;
+        },
+        [],
+      );
+    }
+
     return copyRule;
   }
 
-  public getDependencyKeysInRule(ruleSchema: Schema) {
+  public static getDependencyKeysInRule(ruleSchema: Schema) {
     const refs: Object[] = [];
     const keys: string[] = [];
 
-    ruleSchema.$_terms.whens.forEach((when: any) => {
-      const ref = when.ref;
-      if (ref) {
-        refs.push(ref);
-      }
-    });
+    if (ruleSchema.$_terms && ruleSchema.$_terms.whens) {
+      ruleSchema.$_terms.whens.forEach((when: any) => {
+        const ref = when.ref;
+        if (ref) {
+          refs.push(ref);
+        }
+      });
+    }
 
     ["_valids", "_invalids"].forEach((prop) => {
       if (
@@ -99,56 +105,49 @@ export default class Service extends ServiceBase {
     return keys;
   }
 
-  public getValidationErrorTemplateMessages(): { [key: string]: string } {
-    const locale = "en";
-    let data: { [key: string]: string } = {};
-    let status: string | null = null;
-    const promise = import("./validation/lang/" + locale + ".json");
-
-    promise.catch((reason) => {
-      status = "rejected";
-    });
-
-    promise.then((result: { default: { [key: string]: string } }) => {
-      status = "fulfilled";
-      data = result.default;
-    });
-
-    while (_.isEmpty(status)) {}
-
-    return data;
+  public static getValidationErrorTemplateMessages(): {
+    [key: string]: string;
+  } {
+    return ErrorTemplateMessages;
   }
 
-  public getValidationErrors(data, ruleLists, names, messages) {
-    const schema = Joi.object({});
+  public static getValidationErrors(data, ruleLists, names, messages) {
+    const rootSchema = Joi.object({});
 
     _.forEach(ruleLists, (ruleList, key) => {
       const segs: string[] = key.split(".");
-      let pos = schema;
+      let parentSchema = rootSchema;
+
       while (!_.isEmpty(segs)) {
         const seg = <string>segs.shift();
         if (
-          !_.has(pos, "_ids") ||
-          !_.has(pos["_ids"], "_byKey") ||
-          !(<Map<string, any>>pos["_ids"]["_byKey"]).has(seg)
+          !_.has(parentSchema, "_ids") ||
+          !_.has(parentSchema["_ids"], "_byKey") ||
+          !(<Map<string, any>>parentSchema["_ids"]["_byKey"]).has(seg)
         ) {
           let node;
           if (!_.isEmpty(segs)) {
             node = Joi.object({});
           } else {
-            let node = Joi.any();
+            node = Joi.any().label(names[key]);
             _.forEach(ruleList, (rule) => {
               node = node.concat(rule);
             });
           }
-          pos = pos.concat(Joi.object({ seg: node })).label(names[key]);
+
+          const schema = parentSchema.concat(Joi.object({ [seg]: node }));
+          Object.keys(schema).forEach((k) => {
+            parentSchema[k] = schema[k];
+          });
         }
-        pos = (<Map<string, any>>pos["_ids"]["_byKey"]).get(seg);
+        parentSchema = (<Map<string, any>>parentSchema["_ids"]["_byKey"]).get(
+          seg,
+        ).schema;
       }
     });
 
     const errors = {};
-    const result = schema.validate(data, {
+    const result = rootSchema.validate(data, {
       abortEarly: false,
       allowUnknown: true,
       messages,
@@ -167,21 +166,23 @@ export default class Service extends ServiceBase {
     return errors;
   }
 
-  public hasArrayObjectRuleInRuleList(ruleList) {
+  public static hasArrayObjectRuleInRuleList(ruleList) {
+    let hasArrayObject = false;
+
     if (_.isEmpty(ruleList)) {
-      return false;
+      return hasArrayObject;
     }
 
     _.forEach(ruleList, (rule) => {
       if (rule.type == "object") {
-        return true;
+        hasArrayObject = true;
       }
     });
 
-    return false;
+    return hasArrayObject;
   }
 
-  public removeDependencyKeySymbolInRule(rule) {
+  public static removeDependencyKeySymbolInRule(rule) {
     return rule;
   }
 

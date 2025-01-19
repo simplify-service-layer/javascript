@@ -21,7 +21,7 @@ export default interface ServiceBase {
 }
 
 export default abstract class ServiceBase {
-  public readonly BIND_NAME_EXP = /\{\{([a-zA-Z][\w\.\*]+)\}\}/;
+  public readonly BIND_NAME_EXP = /\{\{([a-zA-Z][\w\.\*]+)\}\}/g;
   private static onStartCallbacks: (() => void)[] = [];
   private static onFailCallbacks: (() => void)[] = [];
   private static onSuccessCallbacks: (() => void)[] = [];
@@ -29,7 +29,7 @@ export default abstract class ServiceBase {
   private data: { [key: string]: any };
   private errors: { [key: string]: string[] };
   private inputs: { [key: string]: any };
-  private isRun: boolean = false;
+  private isRun: boolean;
   private names: { [key: string]: string };
   private parent: null | ServiceBase;
   private validations: { [key: string]: boolean };
@@ -40,19 +40,18 @@ export default abstract class ServiceBase {
   ): Response;
 
   public constructor(
-    inputs: { [key: string]: string } = {},
+    inputs: { [key: string]: any } = {},
     names: { [key: string]: string } = {},
     parent: null | ServiceBase = null,
   ) {
-    this.inputs = inputs;
-    this.names = names;
-    this.parent = parent;
     this.childs = {};
     this.data = {};
     this.errors = {};
-    this.inputs = {};
-    this.names = {};
+    this.inputs = inputs;
+    this.names = names;
     this.validations = {};
+    this.isRun = false;
+    this.parent = parent;
 
     _.forEach(
       [
@@ -64,7 +63,7 @@ export default abstract class ServiceBase {
         "removeDependencyKeySymbolInRule",
       ],
       (method) => {
-        if (!_.has(this.constructor, method)) {
+        if (!this.constructor[method]) {
           throw new Error("should be implement method[" + method + "]");
         }
       },
@@ -80,20 +79,19 @@ export default abstract class ServiceBase {
               this.constructor.name,
           );
         }
-      });
+      })
+      .value();
 
     _.chain(this.inputs)
       .keys()
       .forEach((key) => {
         this.validate(key);
-      });
+      })
+      .value();
 
     ServiceBase.getAllCallbacks();
     ServiceBase.getAllLoaders();
   }
-  // static staticMethod() {
-  //   throw new Error("Method not implemented.");
-  // }
 
   public static addOnFailCallback(callback) {
     ServiceBase.onFailCallbacks.push(callback);
@@ -132,7 +130,8 @@ export default abstract class ServiceBase {
               self.prototype.constructor.name,
           );
         }
-      });
+      })
+      .value();
 
     _.forEach(self.getTraits(), (cls) => {
       _.forEach(cls.getAllCallbacks(), (callback, key) => {
@@ -164,7 +163,8 @@ export default abstract class ServiceBase {
               self.prototype.constructor.name,
           );
         }
-      });
+      })
+      .value();
 
     _.forEach(this.getTraits(), (cls) => {
       _.forEach(cls.getAllLoaders(), (loader, key) => {
@@ -206,25 +206,24 @@ export default abstract class ServiceBase {
 
   public static getAllRuleLists(): Map<Constructor, { [key: string]: any[] }> {
     const self = <Constructor>this;
-    let arr: Map<Constructor, { [key: string]: any[] }> = new Map();
-
+    let map: Map<Constructor, { [key: string]: any[] }> = new Map();
     _.forEach([...ServiceBase.getAllTraits(), self], (cls) => {
-      arr.set(cls, {});
-      const ruleLists = <{ [key: string]: any[] }>arr.get(cls);
+      map.set(cls, {});
+      const ruleLists = <{ [key: string]: any[] }>map.get(cls);
       _.forEach(cls.getRuleLists(), (ruleList, key) => {
         if (!_.isArray(ruleList)) {
           ruleList = [ruleList];
         }
-        if (!_.has(arr.get(cls), key)) {
-          (<{ [key: string]: any[] }>arr.get(cls))[key] = [];
+        if (!_.has(map.get(cls), key)) {
+          (<{ [key: string]: any[] }>map.get(cls))[key] = [];
         }
         _.forEach(ruleList, (rule) => {
-          (<{ [key: string]: any[] }>arr.get(cls))[key].push(rule);
+          (<{ [key: string]: any[] }>map.get(cls))[key].push(rule);
         });
       });
     });
 
-    return arr;
+    return map;
   }
 
   public static getAllTraits(): Constructor[] {
@@ -362,23 +361,24 @@ export default abstract class ServiceBase {
         .keys()
         .forEach((key) => {
           this.validate(key);
-        });
+        })
+        .value();
 
-      _.chain(this.constructor.getAllRuleLists())
-        .keys()
-        .forEach((cls) => {
-          _.chain(this.constructor.getAllRuleLists()[cls])
-            .keys()
-            .forEach((key) => {
-              this.validate(key);
-            });
-        });
+      [...this.constructor.getAllRuleLists().keys()].forEach((cls) => {
+        _.chain(this.constructor.getAllRuleLists().get(cls))
+          .keys()
+          .forEach((key) => {
+            this.validate(key);
+          })
+          .value();
+      });
 
       _.chain(this.constructor.getAllLoaders())
         .keys()
         .forEach((key) => {
           this.validate(key);
-        });
+        })
+        .value();
 
       totalErrors = this.getTotalErrors();
 
@@ -432,11 +432,12 @@ export default abstract class ServiceBase {
         for (let i = 0; i < segs.length - 1; ++i) {
           let hasArrayObjectRule = false;
           const parentKey = segs.slice(0, i + 1).join(".");
-
-          this.constructor.getAllRuleLists().forEach((parentRuleLists, cl) => {
+          [...this.constructor.getAllRuleLists().keys()].forEach((cl) => {
+            const parentRuleLists = this.constructor.getAllRuleLists().get(cl);
             let parentRuleList = _.has(parentRuleLists, parentKey)
               ? parentRuleLists[parentKey]
               : [];
+
             if (cl.hasArrayObjectRuleInRuleList(parentRuleList)) {
               hasArrayObjectRule = true;
             }
@@ -450,14 +451,15 @@ export default abstract class ServiceBase {
             );
           }
         }
-      });
+      })
+      .value();
 
     let i = 0;
 
     while (true) {
       ++i;
       const filteredRuleLists = _.pickBy(ruleLists, (v, k) => {
-        return new RegExp(".*$").test(k) || new RegExp(".*.").test(k);
+        return new RegExp("\\.\\*$").test(k) || new RegExp("\\.\\*\\.").test(k);
       });
 
       if (_.isEmpty(filteredRuleLists)) {
@@ -466,12 +468,12 @@ export default abstract class ServiceBase {
 
       _.forEach(_.keys(filteredRuleLists), (rKey) => {
         let matches = <RegExpMatchArray>rKey.match("/^(.+?).*/");
-        let allSegs = (matches[1] + ".*").split(".");
+        let allSegs = matches ? (matches[1] + ".*").split(".") : [];
         let segs: string[] = [];
         let rKeyVal = data;
         let isSuccess = true;
 
-        while (allSegs) {
+        while (!_.isEmpty(allSegs)) {
           const seg = <string>allSegs.shift();
           segs.push(seg);
           const k = segs.join(".");
@@ -511,7 +513,7 @@ export default abstract class ServiceBase {
       let allSegs = rKey.split(".");
       let segs: string[] = [];
       let rKeyVal = data;
-      while (allSegs) {
+      while (!_.isEmpty(allSegs)) {
         const seg = <string>allSegs.shift();
         segs.push(seg);
         const k = segs.join(".");
@@ -535,22 +537,26 @@ export default abstract class ServiceBase {
             .keys()
             .filter((v) => {
               return !!v.match("/^" + k + "./");
-            });
+            })
+            .value();
           _.chain(removeRuleLists)
             .keys()
             .forEach((v) => {
               delete ruleLists[v];
-            });
+            })
+            .value();
           const removeNames = _.chain(this.names)
             .keys()
             .filter((v) => {
               return !!v.match("/^" + k + "./");
-            });
+            })
+            .value();
           _.chain(removeNames)
             .keys()
             .forEach((v) => {
               delete this.names[v];
-            });
+            })
+            .value();
           break;
         }
 
@@ -586,9 +592,9 @@ export default abstract class ServiceBase {
   }
 
   protected getLoadedDataWith(key) {
-    let hasServicesInArray, hasError, values;
+    let hasServicesInArray, hasError, values, value, loader;
     const data = this.getData();
-    const loader = _.has(this.constructor.getAllLoaders(), key)
+    loader = _.has(this.constructor.getAllLoaders(), key)
       ? this.constructor.getAllLoaders()[key]
       : null;
 
@@ -597,24 +603,20 @@ export default abstract class ServiceBase {
     }
 
     if (_.has(this.getInputs(), key)) {
-      const value = this.getInputs()[key];
-      const loader = function () {
-        return value;
-      };
+      value = this.getInputs()[key];
+    } else {
+      if (_.isNull(loader)) {
+        return data;
+      }
+      value = this.resolve(loader);
     }
-
-    if (_.isEmpty(loader)) {
-      return data;
-    }
-
-    const value = this.resolve(loader);
 
     if (this.isResolveError(value)) {
       return data;
     }
 
     hasServicesInArray = false;
-    if (!_.isEmpty(value) && _.isArray(value) && _.values(value) === value) {
+    if (!_.isEmpty(value) && _.isArray(value)) {
       value.forEach((v) => {
         if (this.constructor.isInitable(v)) {
           hasServicesInArray = true;
@@ -679,11 +681,8 @@ export default abstract class ServiceBase {
   }
 
   protected getRelatedRuleLists(key, cls): { [key: string]: any[] } {
-    const ruleLists: { [key: string]: any[] } = _.has(
-      this.constructor.getAllRuleLists(),
-      cls,
-    )
-      ? this.constructor.getAllRuleLists()[cls]
+    const ruleLists = this.constructor.getAllRuleLists().has(cls)
+      ? this.constructor.getAllRuleLists().get(cls)
       : {};
 
     return _.pickBy(ruleLists, function (ruleList, k) {
@@ -738,6 +737,10 @@ export default abstract class ServiceBase {
   protected resolveBindName(name: string): string {
     let boundKeys, bindName;
     while ((boundKeys = this.getBindKeysInName(name))) {
+      if (_.isEmpty(boundKeys)) {
+        break;
+      }
+
       const key = boundKeys[0];
       const pattern = new RegExp("\\{\\{(\\s*)" + key + "(\\s*)\\}\\}");
       const bindNames = _.assign(
@@ -798,7 +801,7 @@ export default abstract class ServiceBase {
       );
     }
 
-    if (this.validations[key]) {
+    if (_.has(this.validations, key)) {
       return this.validations[key];
     }
 
@@ -937,8 +940,12 @@ export default abstract class ServiceBase {
       const messages = cls.getValidationErrorTemplateMessages();
       const names = {};
 
-      _.forEach(this.names, (v, k) => {
-        names[k] = this.resolveBindName(v);
+      _.forEach(_.keys(this.names), (k) => {
+        names[k] = this.resolveBindName("{{" + k + "}}");
+      });
+
+      _.forEach(_.keys(ruleLists), (k) => {
+        names[k] = this.resolveBindName("{{" + k + "}}");
       });
 
       _.forEach(ruleLists, (ruleList, ruleKey) => {
