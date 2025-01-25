@@ -1,7 +1,7 @@
 {
   "name": "@simplify-service-layer/base",
   "description": "simplify service layer for javascript",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "scripts": {
     "lint": "eslint .",
     "test": "jest",
