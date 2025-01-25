@@ -1,0 +1,54 @@
+name: npm publish
+on: push
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-latest
+    outputs:
+      isPublished: ${{ steps.get_infos.outputs.isPublished }}
+      publishTag: ${{ steps.get_infos.outputs.publishTag }}
+
+    steps:
+      - uses: actions/checkout@v3
+        name: checkout codes
+        id: checkout
+      - uses: actions/github-script@v7
+        name: get infomations for availability
+        id: get_infos
+        with:
+          script: |
+            const package = require('./package.json');
+            const childProcess = require('node:child_process');
+            const currentVersion = package.version;
+            const branch = childProcess.execSync('git symbolic-ref --short HEAD').toString().trim();
+            const oldVersions = JSON.parse(childProcess.execSync('npm view '+ package.name +' versions').toString().replaceAll('\'', '"'));
+            const isPublished = oldVersions.includes(currentVersion);
+
+            if (branch == 'main' || branch == 'master') {
+              package.publishTag = 'latest';
+            } else if (branch.match(/(\d+\.|)\d+/)) {
+              package.publishTag = 'v'+branch.match(/(\d+\.|)\d+/)?.[0]+'-lts';
+            } else {
+              throw new Error('`publishTag` is not define.');
+            }
+
+            childProcess.execSync('echo "publishTag='+package.publishTag+'" >> "$GITHUB_OUTPUT"');
+            childProcess.execSync('echo "isPublished='+isPublished+'" >> "$GITHUB_OUTPUT"');
+  publish:
+    name: publish
+    needs: prepare
+    if: needs.prepare.outputs.isPublished == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 21
+          registry-url: https://registry.npmjs.org/
+      - run: rm -rf ./dist
+      - run: npm i
+      - run: npm run build
+      - run: cp ./package.json ./package-lock.json ./dist/
+      - run: npm publish ./dist --access public --tag ${{needs.prepare.outputs.publishTag}}
+    env:
+      NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
