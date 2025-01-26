@@ -2,6 +2,15 @@
   "name": "@simplify-service-layer/base",
   "description": "simplify service layer for javascript",
   "version": "0.4.1",
+  "author": {
+    "name": "jongwoo Yoo",
+    "email": "webdeveloper.kr@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/simplify-service-layer/javascript"
+  },
+  "license": "ISC",
   "scripts": {
     "lint": "eslint .",
     "test": "jest",
