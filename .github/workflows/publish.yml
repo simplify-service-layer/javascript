@@ -49,6 +49,7 @@ jobs:
       - run: npm i
       - run: npm run build
       - run: cp ./package.json ./package-lock.json ./dist/
+      - run: cp ./README.* ./dist/
       - run: npm publish ./dist --access public --tag ${{needs.prepare.outputs.publishTag}}
     env:
       NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
