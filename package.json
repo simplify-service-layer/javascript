@@ -11,6 +11,7 @@
     "url": "https://github.com/simplify-service-layer/javascript"
   },
   "license": "ISC",
+  "readmeFilename": "README.md",
   "scripts": {
     "lint": "eslint .",
     "test": "jest",
