@@ -74,7 +74,7 @@ export default abstract class ServiceBase {
 
   public static getAllCallbacks(): { [key: string]: Function } {
     const self = this;
-    let arr = {};
+    let arr: { [key: string]: Function } = {};
 
     _.chain(self.getCallbacks())
       .keys()
@@ -91,7 +91,7 @@ export default abstract class ServiceBase {
 
     _.forEach(self.getTraits(), (cls) => {
       _.forEach(cls.getAllCallbacks(), (callback, key) => {
-        if (_.has(arr, key)) {
+        if (_.has(arr, key) && arr[key].toString() !== callback.toString()) {
           throw new Error(
             key +
               " callback key is duplicated in traits in " +
@@ -107,9 +107,9 @@ export default abstract class ServiceBase {
     return arr;
   }
 
-  public static getAllLoaders() {
+  public static getAllLoaders(): { [key: string]: Function } {
     const self = this;
-    let arr = {};
+    let arr: { [key: string]: Function } = {};
 
     _.chain(self.getLoaders())
       .keys()
@@ -126,7 +126,7 @@ export default abstract class ServiceBase {
 
     _.forEach(this.getTraits(), (cls) => {
       _.forEach(cls.getAllLoaders(), (loader, key) => {
-        if (_.has(arr, key)) {
+        if (_.has(arr, key) && arr[key].toString() !== loader.toString()) {
           throw new Error(
             key +
               " loader key is duplicated in traits in " +
@@ -604,9 +604,14 @@ export default abstract class ServiceBase {
 
   protected getClosureDependencies(func: Function) {
     const deps: string[] = [];
-    const data = acorn.parse(func.toString(), {
-      ecmaVersion: "latest",
-    });
+    let data;
+    try {
+      data = acorn.parse(func.toString(), {
+        ecmaVersion: "latest",
+      });
+    } catch (e) {
+      throw new Error("unexpected function code: " + func.toString());
+    }
     const params = JSON.parse(JSON.stringify(data)).body[0].expression.params;
 
     _.forEach(params, (param: any) => {
@@ -758,7 +763,7 @@ export default abstract class ServiceBase {
     );
     const params = reflected.body[0].expression.params;
 
-    _.forEach(depNames, (depName, i) => {
+    for (const [i, depName] of depNames.entries()) {
       // todo: add if case when default value is object
       if (this.validations[depName] && _.has(this.data, depName)) {
         depVals.push(this.data[depName]);
@@ -767,7 +772,7 @@ export default abstract class ServiceBase {
       } else {
         return this.resolveError();
       }
-    });
+    }
 
     return func.apply(null, depVals);
   }
@@ -882,12 +887,13 @@ export default abstract class ServiceBase {
       ? this.constructor.getAllPromiseLists()[mainKey]
       : [];
 
-    _.forEach(promiseList, (promise) => {
+    for (const i in promiseList) {
+      const promise = promiseList[i];
       if (!this.validate(promise, depth)) {
         this.validations[mainKey] = false;
         return false;
       }
-    });
+    }
 
     const loader = _.has(this.constructor.getAllLoaders(), mainKey)
       ? this.constructor.getAllLoaders()[mainKey]
@@ -918,7 +924,7 @@ export default abstract class ServiceBase {
       const deps = this.getClosureDependencies(callback);
 
       _.forEach(deps, (dep) => {
-        if (!this.validate(dep, depth)) {
+        if (key != dep && !this.validate(dep, depth)) {
           this.validations[key] = false;
         }
       });
@@ -996,7 +1002,7 @@ export default abstract class ServiceBase {
 
       const messages = cls.getValidationErrorTemplateMessages();
 
-      _.forEach(ruleLists, (ruleList, ruleKey) => {
+      for (const [ruleKey, ruleList] of Object.entries(ruleLists)) {
         const errorLists = cls.getValidationErrors(
           items,
           { [ruleKey]: ruleList },
@@ -1016,7 +1022,7 @@ export default abstract class ServiceBase {
           this.validations[key] = false;
           return false;
         }
-      });
+      }
     });
 
     if (_.has(this.validations, key) && false === this.validations[key]) {

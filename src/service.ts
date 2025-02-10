@@ -183,7 +183,7 @@ export default class Service extends ServiceBase {
     result: { [key: string]: string },
     totalErrors: { [key: string]: string[] },
   ): Response {
-    if (!!totalErrors) {
+    if (!_.isEmpty(totalErrors)) {
       return { errors: _.flatten(Object.values(totalErrors)) };
     }
 
