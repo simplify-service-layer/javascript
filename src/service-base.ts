@@ -242,7 +242,7 @@ export default abstract class ServiceBase {
       }
     });
 
-    return new cls().init(data, names);
+    return new cls().setWith(data, names);
   }
 
   public static isInitable(value) {
@@ -322,65 +322,6 @@ export default abstract class ServiceBase {
     return _.cloneDeep(this.validations);
   }
 
-  public init(
-    inputs: { [key: string]: any } = {},
-    names: { [key: string]: string } = {},
-  ) {
-    _.forEach(
-      [
-        "filterPresentRelatedRule",
-        "getValidationErrors",
-        "getDependencyKeysInRule",
-        "getValidationErrorTemplateMessages",
-        "hasArrayObjectRuleInRuleList",
-      ],
-      (method) => {
-        if (!this.constructor[method]) {
-          throw new Error("should be implement method[" + method + "]");
-        }
-      },
-    );
-
-    if (this.isRun) {
-      throw new Error("already run service [" + this.constructor.name + "]");
-    }
-
-    const injectedPropNames = this.getInjectedPropNames();
-
-    _.chain(inputs)
-      .keys()
-      .forEach((key) => {
-        if (_.includes(injectedPropNames, key)) {
-          throw new Error(
-            key +
-              " input key is duplicated with property in " +
-              this.constructor.name,
-          );
-        }
-        if (!new RegExp("^[a-zA-Z][w-]{0,}").test(key)) {
-          throw new Error(
-            key +
-              " input key is not support pattern in " +
-              this.constructor.name,
-          );
-        }
-      })
-      .value();
-
-    this.childs = {};
-    this.data = {};
-    this.errors = {};
-    this.inputs = inputs;
-    this.names = names;
-    this.validations = {};
-    this.isRun = false;
-
-    ServiceBase.getAllCallbacks();
-    ServiceBase.getAllLoaders();
-
-    return this.clone();
-  }
-
   public run() {
     let totalErrors = this.getTotalErrors();
 
@@ -455,6 +396,65 @@ export default abstract class ServiceBase {
 
   public setParent(parent) {
     this.parent = parent;
+  }
+
+  public setWith(
+    inputs: { [key: string]: any } = {},
+    names: { [key: string]: string } = {},
+  ) {
+    _.forEach(
+      [
+        "filterPresentRelatedRule",
+        "getValidationErrors",
+        "getDependencyKeysInRule",
+        "getValidationErrorTemplateMessages",
+        "hasArrayObjectRuleInRuleList",
+      ],
+      (method) => {
+        if (!this.constructor[method]) {
+          throw new Error("should be implement method[" + method + "]");
+        }
+      },
+    );
+
+    if (this.isRun) {
+      throw new Error("already run service [" + this.constructor.name + "]");
+    }
+
+    const injectedPropNames = this.getInjectedPropNames();
+
+    _.chain(inputs)
+      .keys()
+      .forEach((key) => {
+        if (_.includes(injectedPropNames, key)) {
+          throw new Error(
+            key +
+              " input key is duplicated with property in " +
+              this.constructor.name,
+          );
+        }
+        if (!new RegExp("^[a-zA-Z][w-]{0,}").test(key)) {
+          throw new Error(
+            key +
+              " input key is not support pattern in " +
+              this.constructor.name,
+          );
+        }
+      })
+      .value();
+
+    this.childs = {};
+    this.data = {};
+    this.errors = {};
+    this.inputs = inputs;
+    this.names = names;
+    this.validations = {};
+    this.isRun = false;
+
+    ServiceBase.getAllCallbacks();
+    ServiceBase.getAllLoaders();
+
+    return this;
   }
 
   protected clone(): ServiceBase {

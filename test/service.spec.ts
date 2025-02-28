@@ -23,7 +23,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: {
           aaaa: "aaaa",
@@ -72,7 +72,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: {
           aaaa: "aaaa",
@@ -126,7 +126,7 @@ describe("service", () => {
           test2: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: {
           aaaa: "aaaa",
@@ -164,7 +164,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: "result value",
       },
@@ -203,7 +203,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: [[childService], [childService]],
       },
@@ -245,7 +245,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: [childService],
       },
@@ -279,7 +279,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service1.run();
 
@@ -305,7 +305,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service2.run();
 
@@ -336,7 +336,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service1.run();
 
@@ -363,7 +363,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service1.run();
 
@@ -387,7 +387,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service2.run();
 
@@ -417,7 +417,7 @@ describe("service", () => {
           result: [Joi.required(), Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service1.run();
 
@@ -455,7 +455,7 @@ describe("service", () => {
           "result.b": [Joi.object({})],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service.run();
 
@@ -496,7 +496,7 @@ describe("service", () => {
           "result.b.c": [Joi.string()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service.run();
 
@@ -522,7 +522,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {},
       {
         result: "result name",
@@ -552,7 +552,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init({}, {});
+    })().setWith({}, {});
 
     service.run();
 
@@ -575,7 +575,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {},
       {
         result: "{{abcd}}",
@@ -605,7 +605,7 @@ describe("service", () => {
           result: [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {},
       {
         result: "{{abcd}}",
@@ -639,7 +639,7 @@ describe("service", () => {
           "result.a.b": [Joi.required()],
         };
       }
-    })().init(
+    })().setWith(
       {
         result: {
           a: {},
