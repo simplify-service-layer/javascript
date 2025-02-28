@@ -623,7 +623,7 @@ export default abstract class ServiceBase {
   }
 
   protected getLoadedDataWith(key) {
-    let hasServicesInArray, hasError, values, value, loader;
+    let hasServicesInArray, hasResolveError, values, value, loader;
     const data = this.getData();
     loader = _.has(this.constructor.getAllLoaders(), key)
       ? this.constructor.getAllLoaders()[key]
@@ -657,7 +657,7 @@ export default abstract class ServiceBase {
       });
     }
     values = hasServicesInArray ? value : [value];
-    hasError = false;
+    hasResolveError = false;
 
     _.forEach(values, (v, i) => {
       let service;
@@ -681,14 +681,14 @@ export default abstract class ServiceBase {
         this.childs[hasServicesInArray ? key + "." + i : key] = service;
         if (this.isResolveError(resolved)) {
           delete values[i];
-          hasError = true;
+          hasResolveError = true;
           this.validations[key] = false;
         }
         values[i] = resolved;
       }
     });
 
-    if (!hasError) {
+    if (!hasResolveError) {
       this.data[key] = hasServicesInArray ? values : values[0];
     }
 
