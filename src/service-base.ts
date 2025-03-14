@@ -452,6 +452,22 @@ export default abstract class ServiceBase {
       })
       .value();
 
+    _.forEach(_.keys(inputs), (key) => {
+      if (_.has(this.inputs, key)) {
+        throw new Error(
+          key + " input key is duplicated in " + this.constructor.name,
+        );
+      }
+    });
+
+    _.forEach(_.keys(names), (key) => {
+      if (_.has(this.names, key)) {
+        throw new Error(
+          key + " name key is duplicated in " + this.constructor.name,
+        );
+      }
+    });
+
     this.inputs = inputs;
     this.names = names;
 
