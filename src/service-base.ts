@@ -468,8 +468,8 @@ export default abstract class ServiceBase {
       }
     });
 
-    this.inputs = inputs;
-    this.names = names;
+    this.inputs = Object.assign(this.inputs, inputs);
+    this.names = Object.assign(this.names, names);
 
     ServiceBase.getAllCallbacks();
     ServiceBase.getAllLoaders();
