@@ -323,6 +323,15 @@ export default abstract class ServiceBase {
   }
 
   public run() {
+    if (this.isRun) {
+      throw new Error("already run service [" + this.constructor.name + "]");
+    }
+
+    this.childs = {};
+    this.data = {};
+    this.errors = {};
+    this.validations = {};
+
     let totalErrors = this.getTotalErrors();
 
     if (!this.isRun) {
@@ -443,13 +452,8 @@ export default abstract class ServiceBase {
       })
       .value();
 
-    this.childs = {};
-    this.data = {};
-    this.errors = {};
     this.inputs = inputs;
     this.names = names;
-    this.validations = {};
-    this.isRun = false;
 
     ServiceBase.getAllCallbacks();
     ServiceBase.getAllLoaders();
