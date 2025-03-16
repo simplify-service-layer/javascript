@@ -269,6 +269,10 @@ export default abstract class ServiceBase {
     return isServiceClass;
   }
 
+  public clone(): ServiceBase {
+    return _.cloneDeep(this);
+  }
+
   public getChilds() {
     return _.cloneDeep(this.childs);
   }
@@ -462,10 +466,6 @@ export default abstract class ServiceBase {
     ServiceBase.getAllCallbacks();
     ServiceBase.getAllLoaders();
 
-    return this;
-  }
-
-  protected clone(): ServiceBase {
     return this;
   }
 
