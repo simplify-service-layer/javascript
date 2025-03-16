@@ -322,7 +322,7 @@ export default abstract class ServiceBase {
     return _.cloneDeep(this.validations);
   }
 
-  public run() {
+  public async run() {
     if (this.isRun) {
       throw new Error("already run service [" + this.constructor.name + "]");
     }
@@ -340,35 +340,23 @@ export default abstract class ServiceBase {
           callback();
         });
       }
-
-      _.chain(this.getInputs())
-        .keys()
-        .forEach((key) => {
-          this.validate(key);
-        })
-        .value();
-
-      [...this.constructor.getAllRuleLists().keys()].forEach((cls) => {
-        _.chain(this.constructor.getAllRuleLists().get(cls))
-          .keys()
-          .forEach((key) => {
-            this.validate(key);
-          })
-          .value();
-      });
-
-      _.chain(this.constructor.getAllLoaders())
-        .keys()
-        .forEach((key) => {
-          this.validate(key);
-        })
-        .value();
+      for (const key of _.keys(this.getInputs())) {
+        await this.validate(key);
+      }
+      for (const cls of [...this.constructor.getAllRuleLists().keys()]) {
+        for (const key of _.keys(this.constructor.getAllRuleLists().get(cls))) {
+          await this.validate(key);
+        }
+      }
+      for (const key of _.keys(this.constructor.getAllLoaders())) {
+        await this.validate(key);
+      }
 
       totalErrors = this.getTotalErrors();
 
       if (!this.parent) {
         if (_.isEmpty(totalErrors)) {
-          this.runAllDeferCallbacks();
+          await this.runAllDeferCallbacks();
           _.forEach(this.constructor.onSuccessCallbacks, (callback) => {
             callback();
           });
@@ -642,7 +630,7 @@ export default abstract class ServiceBase {
     return deps;
   }
 
-  protected getLoadedDataWith(key) {
+  protected async getLoadedDataWith(key) {
     let hasServicesInArray, hasResolveError, values, value, loader;
     const data = this.getData();
     loader = _.has(this.constructor.getAllLoaders(), key)
@@ -661,7 +649,7 @@ export default abstract class ServiceBase {
       if (_.isNull(loader)) {
         return data;
       }
-      value = this.resolve(loader);
+      value = await this.resolve(loader);
     }
 
     if (this.isResolveError(value)) {
@@ -679,7 +667,7 @@ export default abstract class ServiceBase {
     values = hasServicesInArray ? value : [value];
     hasResolveError = false;
 
-    _.forEach(values, (v, i) => {
+    for (const [i, v] of Object.entries(values)) {
       let service;
       let resolved;
       if (this.constructor.isInitable(v)) {
@@ -688,13 +676,13 @@ export default abstract class ServiceBase {
         _.forEach(v[2], (name, k) => {
           v[2][k] = this.resolveBindName(name);
         });
-        service = this.constructor.initService(v);
+        service = this.constructor.initService(<any[]>v);
         service.setParent(this);
-        resolved = service.run();
+        resolved = await service.run();
       } else if (v instanceof ServiceBase) {
         service = v;
         service.setParent(this);
-        resolved = service.run();
+        resolved = await service.run();
       }
 
       if (service) {
@@ -706,7 +694,7 @@ export default abstract class ServiceBase {
         }
         values[i] = resolved;
       }
-    });
+    }
 
     if (!hasResolveError) {
       this.data[key] = hasServicesInArray ? values : values[0];
@@ -775,7 +763,7 @@ export default abstract class ServiceBase {
     return _.isObject(value) && value instanceof errorClass;
   }
 
-  protected resolve(func: Function) {
+  protected async resolve(func: Function) {
     const depNames = this.getClosureDependencies(func);
     const depVals: any[] = [];
     const reflected = JSON.parse(
@@ -793,8 +781,7 @@ export default abstract class ServiceBase {
         return this.resolveError();
       }
     }
-
-    return func.apply(null, depVals);
+    return await func.apply(null, depVals);
   }
 
   protected resolveBindName(name: string): string {
@@ -852,7 +839,7 @@ export default abstract class ServiceBase {
     return new Error("can't be resolve");
   }
 
-  protected runAllDeferCallbacks() {
+  protected async runAllDeferCallbacks() {
     const callbacks = _.pickBy(
       this.constructor.getAllCallbacks(),
       (value, key) => {
@@ -860,16 +847,16 @@ export default abstract class ServiceBase {
       },
     );
 
-    _.forEach(callbacks, (callback) => {
-      this.resolve(callback);
-    });
+    for (const callback of _.values(callbacks)) {
+      await this.resolve(callback);
+    }
 
-    _.forEach(this.childs, (child) => {
-      child.runAllDeferCallbacks();
-    });
+    for (const child of _.values(this.childs)) {
+      await child.runAllDeferCallbacks();
+    }
   }
 
-  protected validate(key, depth = ""): boolean {
+  protected async validate(key, depth = ""): Promise<boolean> {
     depth = depth ? depth + "|" + key : key;
     const depths = depth.split("|");
     const mainKey = key.split(".")[0];
@@ -909,7 +896,7 @@ export default abstract class ServiceBase {
 
     for (const i in promiseList) {
       const promise = promiseList[i];
-      if (!this.validate(promise, depth)) {
+      if (!(await this.validate(promise, depth))) {
         this.validations[mainKey] = false;
         return false;
       }
@@ -920,13 +907,13 @@ export default abstract class ServiceBase {
       : null;
     const deps = loader ? this.getClosureDependencies(loader) : [];
 
-    _.forEach(deps, (dep) => {
-      if (!this.validate(dep, depth)) {
+    for (const dep of deps) {
+      if (!(await this.validate(dep, depth))) {
         this.validations[mainKey] = false;
       }
-    });
+    }
 
-    const data = this.getLoadedDataWith(mainKey);
+    const data = await this.getLoadedDataWith(mainKey);
     const items = JSON.parse(JSON.stringify(data));
 
     this.validateWith(key, items, depth);
@@ -939,24 +926,24 @@ export default abstract class ServiceBase {
     const orderedCallbackKeys: string[] = this.getOrderedCallbackKeys(key);
     const callbacks = this.constructor.getAllCallbacks();
 
-    _.forEach(orderedCallbackKeys, (callbackKey: string) => {
+    for (const callbackKey of orderedCallbackKeys) {
       const callback = this.constructor.getAllCallbacks()[callbackKey];
       const deps = this.getClosureDependencies(callback);
 
-      _.forEach(deps, (dep) => {
-        if (key != dep && !this.validate(dep, depth)) {
+      for (const dep of deps) {
+        if (key != dep && !(await this.validate(dep, depth))) {
           this.validations[key] = false;
         }
-      });
-    });
+      }
+    }
 
     if (true === this.validations[key]) {
-      _.forEach(orderedCallbackKeys, (callbackKey: string) => {
+      for (const callbackKey of orderedCallbackKeys) {
         if (!callbackKey.match(/@defer$/)) {
           const callback = callbacks[callbackKey];
-          this.resolve(callback);
+          await this.resolve(callback);
         }
-      });
+      }
     }
 
     if (false === this.validations[key]) {
@@ -966,10 +953,10 @@ export default abstract class ServiceBase {
     return true;
   }
 
-  protected validateWith(key, items, depth) {
+  protected async validateWith(key, items, depth) {
     const self = this;
     const mainKey = key.split(".")[0];
-    _.forEach([...this.constructor.getAllTraits(), self.constructor], (cls) => {
+    for (const cls of [...this.constructor.getAllTraits(), self.constructor]) {
       const names = {};
       let ruleLists = this.getRelatedRuleLists(key, cls);
       ruleLists = this.filterAvailableExpandedRuleLists(cls, items, ruleLists);
@@ -978,10 +965,10 @@ export default abstract class ServiceBase {
         names[mainKey] = this.resolveBindName("{{" + mainKey + "}}");
       }
 
-      _.forEach(ruleLists, (ruleList, k) => {
-        _.forEach(ruleList, (rule, j) => {
+      for (const [k, ruleList] of Object.entries(ruleLists)) {
+        for (const [j, rule] of Object.entries(ruleList)) {
           const depKeysInRule = cls.getDependencyKeysInRule(rule);
-          _.forEach(depKeysInRule, (depKey) => {
+          for (const depKey of depKeysInRule) {
             if (!!depKey.match(/\.\*/)) {
               throw new Error(
                 "wildcard(*) key can't exists in rule dependency in " +
@@ -1006,15 +993,15 @@ export default abstract class ServiceBase {
               delete ruleLists[k][j];
             }
 
-            if (!this.validate(depKey, depth)) {
+            if (!(await this.validate(depKey, depth))) {
               this.validations[key] = false;
               delete ruleLists[k][j];
             }
 
             names[depKey] = this.resolveBindName("{{" + depKey + "}}");
-          });
-        });
-      });
+          }
+        }
+      }
 
       _.forEach(ruleLists, (ruleList, k) => {
         names[k] = this.resolveBindName("{{" + k + "}}");
@@ -1043,7 +1030,7 @@ export default abstract class ServiceBase {
           return false;
         }
       }
-    });
+    }
 
     if (_.has(this.validations, key) && false === this.validations[key]) {
       return false;

@@ -2,7 +2,7 @@ import Service from "../src/service";
 import Joi from "../src/validation/validator";
 
 describe("service", () => {
-  test("callback", () => {
+  test("callback", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -32,7 +32,7 @@ describe("service", () => {
       {},
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).toEqual({});
     expect(service.getData()["result"]).toEqual({
@@ -41,7 +41,7 @@ describe("service", () => {
     });
   });
 
-  test("callbackWithDependency", () => {
+  test("callbackWithDependency", async () => {
     const service1 = new (class extends Service {
       public static getBindNames() {
         return {
@@ -81,7 +81,7 @@ describe("service", () => {
       {},
     );
 
-    service1.run();
+    await service1.run();
 
     expect(service1.getErrors()).toEqual({});
     expect(service1.getValidations()).toEqual({
@@ -135,7 +135,7 @@ describe("service", () => {
       {},
     );
 
-    service2.run();
+    await service2.run();
     expect(service2.getErrors()).not.toEqual({});
     expect(service2.getValidations()).toEqual({
       result: false,
@@ -147,7 +147,7 @@ describe("service", () => {
     });
   });
 
-  test("loadDataFromInput", () => {
+  test("loadDataFromInput", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -171,12 +171,12 @@ describe("service", () => {
       {},
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).toEqual({});
   });
 
-  test("loadDataFromInputChildBatchService", () => {
+  test("loadDataFromInputChildBatchService", async () => {
     const childService = class extends Service {
       public static getLoaders() {
         return {
@@ -209,7 +209,7 @@ describe("service", () => {
       },
       {},
     );
-    service.run();
+    await service.run();
 
     expect(service.getData().result).toStrictEqual([
       "child result value",
@@ -218,7 +218,7 @@ describe("service", () => {
     expect(service.getErrors()).toEqual({});
   });
 
-  test("loadDataFromInputService", () => {
+  test("loadDataFromInputService", async () => {
     const childService = class extends Service {
       public static getLoaders() {
         return {
@@ -252,13 +252,13 @@ describe("service", () => {
       {},
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getData()["result"]).toBe("child result value");
     expect(service.getErrors()).toEqual({});
   });
 
-  test("loadDataFromLoader", () => {
+  test("loadDataFromLoader", async () => {
     const service1 = new (class extends Service {
       public static getBindNames() {
         return {
@@ -281,7 +281,7 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service1.run();
+    await service1.run();
 
     expect(service1.getErrors()).toEqual({});
 
@@ -307,12 +307,12 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service2.run();
+    await service2.run();
 
     expect(service2.getErrors()).not.toEqual({});
   });
 
-  test("loadDataFromLoaderWithDependency", () => {
+  test("loadDataFromLoaderWithDependency", async () => {
     const service1 = new (class extends Service {
       public static getBindNames() {
         return {
@@ -338,13 +338,13 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service1.run();
+    await service1.run();
 
     expect(service1.getErrors()).toEqual({});
     expect(service1.getData()["result"]).toEqual("aaaaaa value");
   });
 
-  test("loadDataFromProperty", () => {
+  test("loadDataFromProperty", async () => {
     const service1 = new (class extends Service {
       result: string = "aaaa";
 
@@ -365,7 +365,7 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service1.run();
+    await service1.run();
 
     expect(service1.getErrors()).toEqual({});
 
@@ -389,12 +389,12 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service2.run();
+    await service2.run();
 
     expect(service2.getErrors()).not.toEqual({});
   });
 
-  test("loadDataFromPropertyInDependency", () => {
+  test("loadDataFromPropertyInDependency", async () => {
     const service1 = new (class extends Service {
       aaa: string = "aaaaaa";
 
@@ -419,13 +419,13 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service1.run();
+    await service1.run();
 
     expect(service1.getErrors()).toEqual({});
     expect(service1.getData()["result"]).toEqual("aaaaaa value");
   });
 
-  test("loadDataKeyInvaildBecauseOfChildrenRule", () => {
+  test("loadDataKeyInvaildBecauseOfChildrenRule", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -457,14 +457,14 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service.run();
+    await service.run();
 
     expect(service.getValidations()["result"]).toBe(false);
     expect(service.getValidations()["result.a"]).toBe(false);
     expect(service.getValidations()["result.b"]).toBe(true);
   });
 
-  test("loadDataKeyInvaildBecauseOfParentRule", () => {
+  test("loadDataKeyInvaildBecauseOfParentRule", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -498,7 +498,7 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service.run();
+    await service.run();
 
     expect(service.getValidations()["result"]).toBe(false);
     expect(service.getValidations()["result.a"]).toBe(false);
@@ -507,7 +507,7 @@ describe("service", () => {
     expect(service.getValidations()["result.b.c"]).toBe(true);
   });
 
-  test("loadName", () => {
+  test("loadName", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {};
@@ -529,13 +529,13 @@ describe("service", () => {
       },
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).not.toEqual({});
     expect(service.getErrors()["result"][0]).toContain("result name");
   });
 
-  test("loadNameBound", () => {
+  test("loadNameBound", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -554,13 +554,13 @@ describe("service", () => {
       }
     })().setWith({}, {});
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).not.toEqual({});
     expect(service.getErrors()["result"][0]).toContain("result name");
   });
 
-  test("loadNameBoundNested", () => {
+  test("loadNameBoundNested", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {};
@@ -584,13 +584,13 @@ describe("service", () => {
       },
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).not.toEqual({});
     expect(service.getErrors()["result"][0]).toContain("aaaa bbb ccc ddd");
   });
 
-  test("loadNameBoundNested", () => {
+  test("loadNameBoundNested", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {};
@@ -614,13 +614,13 @@ describe("service", () => {
       },
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).not.toEqual({});
     expect(service.getErrors()["result"][0]).toContain("aaaa bbb ccc ddd");
   });
 
-  test("loadNameMultidimension", () => {
+  test("loadNameMultidimension", async () => {
     const service = new (class extends Service {
       public static getBindNames() {
         return {
@@ -648,7 +648,7 @@ describe("service", () => {
       {},
     );
 
-    service.run();
+    await service.run();
 
     expect(service.getErrors()).not.toEqual({});
     expect(Object.keys(service.getErrors()).includes("result.a.b")).toBe(true);
