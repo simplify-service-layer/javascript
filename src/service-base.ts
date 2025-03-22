@@ -460,6 +460,12 @@ export default abstract class ServiceBase {
       }
     });
 
+    _.forEach(Object.keys(inputs), (key) => {
+      if ("" === inputs[key]) {
+        delete inputs[key];
+      }
+    });
+
     this.inputs = Object.assign(this.inputs, inputs);
     this.names = Object.assign(this.names, names);
 
