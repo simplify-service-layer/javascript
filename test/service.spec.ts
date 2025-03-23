@@ -346,16 +346,21 @@ describe("service", () => {
 
   test("loadDataFromProperty", async () => {
     const service1 = new (class extends Service {
-      result: string = "aaaa";
+      key1: string = "aaaa";
 
       public static getBindNames() {
         return {
+          key1: "name for key1",
           result: "name for result",
         };
       }
 
       public static getLoaders() {
-        return {};
+        return {
+          result: (key1) => {
+            return key1;
+          },
+        };
       }
 
       public static getRuleLists() {
@@ -370,16 +375,21 @@ describe("service", () => {
     expect(service1.getErrors()).toEqual({});
 
     const service2 = new (class extends Service {
-      result: string[] = ["aaa", "bbb", "ccc"];
+      key1: string[] = ["aaa", "bbb", "ccc"];
 
       public static getBindNames() {
         return {
+          key1: "name for key1",
           result: "name for result",
         };
       }
 
       public static getLoaders() {
-        return {};
+        return {
+          result: (key1) => {
+            return key1;
+          },
+        };
       }
 
       public static getRuleLists() {

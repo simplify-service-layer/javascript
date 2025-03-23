@@ -671,7 +671,7 @@ export default abstract class ServiceBase {
     });
   }
 
-  protected getClosureDependencies(func: Function) {
+  protected getClosureDependencies(func: Function, excludeProps = true) {
     const deps: string[] = [];
     let data;
     try {
@@ -682,10 +682,17 @@ export default abstract class ServiceBase {
       throw new Error("unexpected function code: " + func.toString());
     }
     const params = JSON.parse(JSON.stringify(data)).body[0].expression.params;
+    const props = this.getInjectedPropNames();
 
     _.forEach(params, (param: any) => {
       const dep: string = param.left ? param.left.name : param.name;
-      deps.push(dep);
+      if (excludeProps) {
+        if (!props.includes(dep)) {
+          deps.push(dep);
+        }
+      } else {
+        deps.push(dep);
+      }
     });
 
     return deps;
@@ -704,8 +711,6 @@ export default abstract class ServiceBase {
 
     if (_.has(this.getInputs(), key)) {
       value = this.getInputs()[key];
-    } else if (this.getInjectedPropNames().includes(key)) {
-      value = this[key];
     } else {
       if (_.isNull(loader)) {
         return data;
@@ -825,19 +830,26 @@ export default abstract class ServiceBase {
   }
 
   protected async resolve(func: Function) {
-    const depNames = this.getClosureDependencies(func);
+    const props = this.getInjectedPropNames();
+    const depNames = this.getClosureDependencies(func, false);
     const depVals: any[] = [];
     const reflected = JSON.parse(
       JSON.stringify(acorn.parse(func.toString(), { ecmaVersion: "latest" })),
     );
-    const params = reflected.body[0].expression.params;
+    const params = {};
+
+    _.forEach(reflected.body[0].expression.params, (param) => {
+      params[param.left ? param.left.name : param.name] = param;
+    });
 
     for (const [i, depName] of depNames.entries()) {
       // todo: add if case when default value is object
-      if (this.validations[depName] && _.has(this.data, depName)) {
+      if (props.includes(depName)) {
+        depVals.push(this[depName]);
+      } else if (this.validations[depName] && _.has(this.data, depName)) {
         depVals.push(this.data[depName]);
-      } else if (this.validations[depName] && params[i].right) {
-        depVals.push(params[i].right.value);
+      } else if (this.validations[depName] && params[depName].right) {
+        depVals.push(params[depName].right.value);
       } else {
         return this.resolveError();
       }
