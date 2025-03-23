@@ -326,6 +326,57 @@ export default abstract class ServiceBase {
     return _.cloneDeep(this.validations);
   }
 
+  public resolveBindName(name: string): string {
+    let boundKeys, bindName;
+    while ((boundKeys = this.getBindKeysInName(name))) {
+      if (_.isEmpty(boundKeys)) {
+        break;
+      }
+
+      const key = boundKeys[0];
+      const keySegs = key.split(".");
+      const mainKey = keySegs[0];
+      const bindNames = _.assign(
+        this.constructor.getAllBindNames(),
+        this.names,
+      );
+
+      if (_.has(bindNames, mainKey)) {
+        bindName = bindNames[mainKey];
+      } else {
+        throw new Error(
+          '"' + mainKey + '" name not exists in ' + this.constructor.name,
+        );
+      }
+
+      const pattern = new RegExp("\\{\\{(\\s*)" + key + "(\\s*)\\}\\}");
+      const replace = this.resolveBindName(bindName);
+      name = name.replace(pattern, replace);
+      const matches = [...name.matchAll(/\[\.\.\.\]/g)];
+
+      if (matches.length > 1) {
+        throw new Error(
+          name + ' has multiple "[...]" string in ' + this.constructor.name,
+        );
+      }
+      if (this.hasArrayObjectRuleInRuleLists(mainKey) && _.isEmpty(matches)) {
+        throw new Error(
+          '"' +
+            mainKey +
+            '" name is required "[...]" string in ' +
+            this.constructor.name,
+        );
+      }
+
+      if (keySegs.length > 1) {
+        const replace = "[" + _.slice(keySegs, 1).join("][") + "]";
+        name = name.replace("[...]", replace);
+      }
+    }
+
+    return name;
+  }
+
   public async run() {
     if (this.isRun) {
       throw new Error("already run service [" + this.constructor.name + "]");
@@ -342,6 +393,10 @@ export default abstract class ServiceBase {
       if (!this.parent) {
         ServiceBase.onStartCallbacks.forEach((callback) => {
           callback();
+        });
+      } else {
+        _.forEach(Object.keys(this.names), (key) => {
+          this.names[key] = this.parent.resolveBindName(this.names[key]);
         });
       }
       for (const key of _.keys(this.getInputs())) {
@@ -788,57 +843,6 @@ export default abstract class ServiceBase {
       }
     }
     return await func.apply(null, depVals);
-  }
-
-  protected resolveBindName(name: string): string {
-    let boundKeys, bindName;
-    while ((boundKeys = this.getBindKeysInName(name))) {
-      if (_.isEmpty(boundKeys)) {
-        break;
-      }
-
-      const key = boundKeys[0];
-      const keySegs = key.split(".");
-      const mainKey = keySegs[0];
-      const bindNames = _.assign(
-        this.constructor.getAllBindNames(),
-        this.names,
-      );
-
-      if (_.has(bindNames, mainKey)) {
-        bindName = bindNames[mainKey];
-      } else {
-        throw new Error(
-          '"' + mainKey + '" name not exists in ' + this.constructor.name,
-        );
-      }
-
-      const pattern = new RegExp("\\{\\{(\\s*)" + key + "(\\s*)\\}\\}");
-      const replace = this.resolveBindName(bindName);
-      name = name.replace(pattern, replace);
-      const matches = [...name.matchAll(/\[\.\.\.\]/g)];
-
-      if (matches.length > 1) {
-        throw new Error(
-          name + ' has multiple "[...]" string in ' + this.constructor.name,
-        );
-      }
-      if (this.hasArrayObjectRuleInRuleLists(mainKey) && _.isEmpty(matches)) {
-        throw new Error(
-          '"' +
-            mainKey +
-            '" name is required "[...]" string in ' +
-            this.constructor.name,
-        );
-      }
-
-      if (keySegs.length > 1) {
-        const replace = "[" + _.slice(keySegs, 1).join("][") + "]";
-        name = name.replace("[...]", replace);
-      }
-    }
-
-    return name;
   }
 
   protected resolveError(): Error {
