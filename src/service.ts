@@ -6,6 +6,8 @@ import Joi from "./validation/validator";
 
 export default class Service extends ServiceBase {
   public static filterPresentRelatedRule(rule: Schema) {
+    let hasPresentRule = false;
+    const copyRule = _.cloneDeep(rule);
     const setOnlyPresence = (schema: any) => {
       schema.type = "any";
       schema["_refs"] = { refs: [] };
@@ -19,12 +21,12 @@ export default class Service extends ServiceBase {
         schema["_flags"].presence == "required"
       ) {
         schema["_flags"] = { presence: "required" };
+        hasPresentRule = true;
       } else {
         schema["_flags"] = {};
       }
     };
 
-    let copyRule = _.cloneDeep(rule);
     setOnlyPresence(copyRule);
     if (copyRule.$_terms && copyRule.$_terms["whens"]) {
       copyRule.$_terms["whens"] = copyRule.$_terms["whens"].reduce(
@@ -47,7 +49,11 @@ export default class Service extends ServiceBase {
       );
     }
 
-    return copyRule;
+    if (hasPresentRule) {
+      return copyRule;
+    }
+
+    return null;
   }
 
   public static getDependencyKeysInRule(ruleSchema: Schema) {
