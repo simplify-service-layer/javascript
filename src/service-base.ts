@@ -54,7 +54,7 @@ export default abstract class ServiceBase {
     const self = this;
     let arr = {};
 
-    _.forEach([...ServiceBase.getAllTraits(), self], (cls) => {
+    _.forEach([...self.getAllTraits(), self], (cls) => {
       const bindNames = cls.getBindNames();
       arr = _.assign(arr, bindNames);
       _.forEach(bindNames, (v, k) => {
@@ -146,7 +146,7 @@ export default abstract class ServiceBase {
     const self = this;
     let arr = {};
 
-    _.forEach([...ServiceBase.getAllTraits(), self], (cls) => {
+    _.forEach([...self.getAllTraits(), self], (cls) => {
       _.forEach(cls.getPromiseLists(), (promiseList, key) => {
         if (!_.has(arr, key)) {
           arr[key] = [];
@@ -168,7 +168,7 @@ export default abstract class ServiceBase {
   > {
     const self = <ServiceBaseClass>this;
     let map: Map<ServiceBaseClass, { [key: string]: any[] }> = new Map();
-    _.forEach([...ServiceBase.getAllTraits(), self], (cls) => {
+    _.forEach([...self.getAllTraits(), self], (cls) => {
       map.set(cls, {});
       const ruleLists = <{ [key: string]: any[] }>map.get(cls);
       _.forEach(cls.getRuleLists(), (ruleList, key) => {
@@ -198,7 +198,7 @@ export default abstract class ServiceBase {
       }
       arr = [...arr, ...cls.getAllTraits()];
     });
-    arr = [...arr, ...ServiceBase.getTraits()];
+    arr = [...arr, ...self.getTraits()];
     arr = _.uniq(arr);
 
     return arr;
@@ -236,8 +236,8 @@ export default abstract class ServiceBase {
     const data = value[1];
     const names = value[2];
 
-    _.forEach(data, (value, key) => {
-      if ("" === value) {
+    _.forEach(Object.keys(data), (key) => {
+      if ("" === data[key]) {
         delete data[key];
       }
     });
@@ -463,8 +463,8 @@ export default abstract class ServiceBase {
     this.inputs = Object.assign(this.inputs, inputs);
     this.names = Object.assign(this.names, names);
 
-    ServiceBase.getAllCallbacks();
-    ServiceBase.getAllLoaders();
+    this.constructor.getAllCallbacks();
+    this.constructor.getAllLoaders();
 
     return this;
   }
@@ -916,7 +916,7 @@ export default abstract class ServiceBase {
     const data = await this.getLoadedDataWith(mainKey);
     const items = JSON.parse(JSON.stringify(data));
 
-    this.validateWith(key, items, depth);
+    await this.validateWith(key, items, depth);
 
     // unnecessary because data is stored already.
     if (_.has(data, key)) {
