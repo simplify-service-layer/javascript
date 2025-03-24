@@ -983,10 +983,6 @@ export default abstract class ServiceBase {
       let ruleLists = this.getRelatedRuleLists(key, cls);
       ruleLists = this.filterAvailableExpandedRuleLists(cls, items, ruleLists);
 
-      if (!_.isEmpty(ruleLists)) {
-        names[mainKey] = this.resolveBindName("{{" + mainKey + "}}");
-      }
-
       for (const [k, ruleList] of Object.entries(ruleLists)) {
         for (const [j, rule] of Object.entries(ruleList)) {
           const depKeysInRule = cls.getDependencyKeysInRule(rule);
@@ -1026,7 +1022,9 @@ export default abstract class ServiceBase {
       }
 
       _.forEach(ruleLists, (ruleList, k) => {
-        names[k] = this.resolveBindName("{{" + k + "}}");
+        if (!_.isEmpty(ruleList)) {
+          names[k] = this.resolveBindName("{{" + k + "}}");
+        }
       });
 
       const messages = cls.getValidationErrorTemplateMessages();
