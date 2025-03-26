@@ -312,6 +312,31 @@ describe("service", () => {
     expect(service2.getErrors()).not.toEqual({});
   });
 
+  test("loadDataFromLoaderWithDefaultValue", async () => {
+    const service1 = new (class extends Service {
+      public static getBindNames() {
+        return {};
+      }
+
+      public static getLoaders() {
+        return {
+          result: (key1 = "abcd") => {
+            return key1;
+          },
+        };
+      }
+
+      public static getRuleLists() {
+        return {};
+      }
+    })().setWith({}, {});
+
+    await service1.run();
+
+    expect(service1.getErrors()).toEqual({});
+    expect(service1.getData()["result"]).toEqual("abcd");
+  });
+
   test("loadDataFromLoaderWithDependency", async () => {
     const service1 = new (class extends Service {
       public static getBindNames() {
