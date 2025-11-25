@@ -190,7 +190,12 @@ export default class Service extends ServiceBase {
     totalErrors: { [key: string]: string[] },
   ): Response {
     if (!_.isEmpty(totalErrors)) {
-      return { errors: _.flatten(Object.values(totalErrors)) };
+      const flatten = (obj) =>
+        _.chain(obj)
+          .values()
+          .flatMap((v) => (_.isString(v) ? v : flatten(v)))
+          .value();
+      return { errors: flatten(totalErrors) };
     }
 
     return { result };
