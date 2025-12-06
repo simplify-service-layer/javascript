@@ -1038,14 +1038,25 @@ export default abstract class ServiceBase {
         );
 
         if (!_.isEmpty(errorLists)) {
-          if (!_.has(this.errors, ruleKey)) {
-            this.errors[ruleKey] = [];
-          }
-          errorLists[ruleKey].forEach((error) => {
-            if (!this.errors[ruleKey].includes(error)) {
-              this.errors[ruleKey].push(error);
+          let hasParentKeyError = false;
+          const ruleKeySegs = ruleKey.split(".");
+          while (!_.isEmpty(ruleKeySegs)) {
+            ruleKeySegs.pop();
+            if (_.has(this.errors, ruleKeySegs.join("."))) {
+              hasParentKeyError = true;
             }
-          });
+          }
+
+          if (!hasParentKeyError) {
+            if (!_.has(this.errors, ruleKey)) {
+              this.errors[ruleKey] = [];
+            }
+            errorLists[ruleKey].forEach((error) => {
+              if (!this.errors[ruleKey].includes(error)) {
+                this.errors[ruleKey].push(error);
+              }
+            });
+          }
           this.validations[key] = false;
           return false;
         }
