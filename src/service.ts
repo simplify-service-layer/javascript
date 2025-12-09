@@ -177,7 +177,7 @@ export default class Service extends ServiceBase {
     }
 
     _.forEach(ruleList, (rule) => {
-      if (rule.type == "object") {
+      if (["object", "array"].includes(rule.type)) {
         hasArrayObject = true;
       }
     });
