@@ -725,7 +725,7 @@ export default abstract class ServiceBase {
     hasServicesInArray = false;
     if (!_.isEmpty(value) && _.isArray(value)) {
       value.forEach((v) => {
-        if (this.constructor.isInitable(v)) {
+        if (this.constructor.isInitable(v) || v instanceof ServiceBase) {
           hasServicesInArray = true;
         }
       });
