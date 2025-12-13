@@ -752,6 +752,9 @@ export default abstract class ServiceBase {
       }
 
       if (service) {
+        try {
+          this.names[key] = service.resolveBindName("{{result}}");
+        } catch (e) {}
         this.childs[hasServicesInArray ? key + "." + i : key] = service;
         if (this.isResolveError(resolved)) {
           delete values[i];
