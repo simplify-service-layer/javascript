@@ -13,8 +13,14 @@ export default class Service extends ServiceBase {
       schema["_refs"] = { refs: [] };
       schema["_valids"] = null;
       schema["_invalids"] = null;
-      schema["_rules"] = [];
-      schema["_singleRules"] = new Map();
+      schema["_rules"] = [...schema["_rules"]].filter((v) => {
+        return v.name.match(/required\w{0,}/);
+      });
+      schema["_singleRules"] = new Map(
+        [...schema["_singleRules"]].filter((value) => {
+          return value[0].match(/required\w{0,}/);
+        }),
+      );
 
       if (
         _.has(schema["_flags"], "presence") &&
